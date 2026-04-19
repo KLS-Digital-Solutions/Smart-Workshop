@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Workspace</title>
+    <style>
+        :root {
+            --bg-color: #f3f4f6; --card-bg: #ffffff; --text-main: #111827; --text-muted: #6b7280; 
+            --border: #e5e7eb; --border-hover: #d1d5db; --accent: #2563eb; --accent-hover: #1d4ed8; 
+            --danger: #ef4444; --danger-bg: #fee2e2; --success: #10b981; --warning: #f59e0b;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --modal-bg: rgba(255, 255, 255, 0.85); --item-hover: #f9fafb;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #0f172a; --card-bg: #1e293b; --text-main: #f8fafc; --text-muted: #94a3b8; 
+            --border: #334155; --border-hover: #475569; --accent: #3b82f6; --accent-hover: #2563eb; 
+            --danger: #ef4444; --danger-bg: #450a0a; --success: #10b981; --warning: #fbbf24;
+            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+            --modal-bg: rgba(30, 41, 59, 0.85); --item-hover: #0f172a;
+        }
+
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 2rem; display: flex; flex-direction: column; align-items: center; user-select: none; -webkit-user-select: none; transition: all 0.3s ease; min-height: 100vh; box-sizing: border-box; }
+        img { -webkit-user-drag: none; }
+        ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+        .status-bar { width: 100%; max-width: 1000px; display: flex; justify-content: space-between; background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px 20px; margin-bottom: 2rem; box-shadow: var(--shadow); box-sizing: border-box; font-size: 0.9rem; font-weight: 500; }
+        .status-item { display: flex; align-items: center; gap: 8px; color: var(--text-muted); }
+        .status-value { color: var(--text-main); font-weight: 600; }
+
+        .header-container { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 1000px; margin-bottom: 2rem; }
+        .header-right { display: flex; gap: 10px; }
+        h1 { margin: 0; font-size: 1.8rem; font-weight: 700; letter-spacing: -0.5px; }
+        .subtitle { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; }
+        .btn-icon { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; box-shadow: var(--shadow); }
+        .btn-icon:hover { border-color: var(--border-hover); transform: translateY(-1px); }
+
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; width: 100%; max-width: 1000px; }
+        .section-workflow { border: 2px solid var(--accent) !important; background: linear-gradient(to bottom right, var(--card-bg), var(--item-hover)); }
+        .section { background-color: var(--card-bg); border-radius: 16px; padding: 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border); }
+        .section h2 { margin-top: 0; font-size: 1.1rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between;}
+
+        .item-list { display: flex; flex-direction: column; gap: 0.5rem; }
+        .item-row { display: flex; align-items: center; background-color: transparent; border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; cursor: pointer; transition: all 0.2s ease; position: relative; overflow: hidden; text-decoration: none; color: var(--text-main); }
+        .item-row:hover { background-color: var(--item-hover); border-color: var(--border-hover); }
+        .workflow-row { background-color: var(--accent); color: white; border: none; }
+        .workflow-row:hover { background-color: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
+
+        .item-content { display: flex; align-items: center; gap: 12px; flex-grow: 1; font-size: 1rem; font-weight: 500; }
+        .app-icon { width: 28px; height: 28px; object-fit: contain; }
+        .emoji-icon { font-size: 1.5rem; line-height: 1; }
+
+        /* Actions & Dragging */
+        .item-actions { display: flex; gap: 4px; }
+        .btn-edit, .btn-delete { background: transparent; color: var(--text-muted); border: none; padding: 8px; border-radius: 6px; cursor: pointer; opacity: 0; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; }
+        .item-row:hover .btn-edit, .item-row:hover .btn-delete { opacity: 1; }
+        .item-row:hover .btn-delete { color: var(--danger); }
+        .btn-edit:hover { background-color: rgba(37, 99, 235, 0.1); color: var(--accent); }
+        
+        .workflow-row:hover .btn-edit, .workflow-row:hover .btn-delete { color: white; opacity: 0.8; }
+        .workflow-row .btn-edit:hover, .workflow-row .btn-delete:hover { background: rgba(255,255,255,0.2); opacity: 1; }
+        
+        .item-row.dragging { opacity: 0.4; border: 2px dashed var(--accent); }
+        .item-row.drag-over { border-top: 2px solid var(--accent); padding-top: calc(0.75rem + 2px); }
+
+        .btn-add { background-color: transparent; border: 1.5px dashed var(--border); color: var(--text-muted); width: 100%; padding: 0.85rem; border-radius: 10px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; margin-top: 0.75rem; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-add:hover { border-color: var(--accent); color: var(--accent); background-color: rgba(37, 99, 235, 0.05); }
+
+        dialog { background-color: var(--modal-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: var(--text-main); border: 1px solid var(--border); border-radius: 16px; padding: 2rem; width: 90%; max-width: 450px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
+        dialog::backdrop { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); }
+        
+        .form-group { margin-bottom: 1.25rem; display: flex; flex-direction: column; }
+        label { margin-bottom: 0.5rem; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+        input[type="text"] { padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid var(--border); background-color: var(--bg-color); color: var(--text-main); outline: none; font-size: 1rem; }
+        input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2); }
+
+        .btn-primary { background-color: var(--accent); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-primary:hover { background-color: var(--accent-hover); }
+        .btn-secondary { background-color: transparent; color: var(--text-main); border: 1px solid var(--border); padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-secondary:hover { background-color: var(--bg-color); }
+        
+        .wf-item-select { display: flex; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid var(--border); cursor: pointer;}
+        .wf-item-select:hover { background: var(--card-bg); }
+        .wf-item-select input { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+
+        .btn-scan { width: 100%; margin-bottom: 1.25rem; display: flex; justify-content: center; align-items: center; gap: 8px; }
+        #system-apps-list { max-height: 180px; overflow-y: auto; background: var(--bg-color); border-radius: 8px; margin-bottom: 1.25rem; display: none; border: 1px solid var(--border); }
+        .sys-app-item { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; font-size: 0.95rem; }
+        .sys-app-item:hover { background-color: var(--card-bg); color: var(--accent); }
+
+        .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; background: var(--bg-color); padding: 8px; border-radius: 8px; border: 1px solid var(--border); }
+        .emoji-btn { background: none; border: none; font-size: 1.4rem; cursor: pointer; padding: 6px; text-align: center; border-radius: 6px; transition: all 0.1s; }
+        .emoji-btn:hover { background-color: var(--border); transform: scale(1.1); }
+        .emoji-btn.selected { background-color: var(--accent); box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 4px var(--accent); }
+        
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        input:checked + .slider { background-color: var(--success); }
+        input:checked + .slider:before { transform: translateX(20px); }
+        svg { width: 1.2rem; height: 1.2rem; fill: currentColor; }
+
+        .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+        .toast { padding: 12px 20px; border-radius: 10px; font-size: 0.9rem; font-weight: 500; animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards; box-shadow: 0 8px 25px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px; pointer-events: auto; }
+        .toast-success { background: var(--success); color: white; }
+        .toast-error { background: var(--danger); color: white; }
+        .toast-info { background: var(--accent); color: white; }
+        @keyframes toastIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-10px); } }
+        .loading-skeleton { background: linear-gradient(90deg, var(--border) 25%, var(--border-hover) 50%, var(--border) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 10px; height: 48px; margin-bottom: 0.5rem; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        /* Search overlay */
+        #search-modal { width: 90%; max-width: 520px; padding: 0; overflow: hidden; }
+        #search-modal::backdrop { background: rgba(0,0,0,0.6); backdrop-filter: blur(6px); }
+        .search-input { width: 100%; padding: 16px 20px; border: none; border-bottom: 1px solid var(--border); background: var(--card-bg); color: var(--text-main); font-size: 1.1rem; outline: none; box-sizing: border-box; }
+        .search-results { max-height: 320px; overflow-y: auto; padding: 4px 0; }
+        .search-result { display: flex; align-items: center; gap: 12px; padding: 10px 20px; cursor: pointer; font-size: 0.95rem; transition: background 0.1s; }
+        .search-result:hover, .search-result.active { background: var(--accent); color: white; }
+        .search-result .sr-type { font-size: 0.7rem; text-transform: uppercase; opacity: 0.6; margin-left: auto; }
+        .search-hint { padding: 12px 20px; color: var(--text-muted); font-size: 0.85rem; text-align: center; }
+
+        /* Category pills */
+        .category-bar { display: flex; gap: 8px; width: 100%; max-width: 1000px; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center; }
+        .cat-pill { padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text-muted); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .cat-pill:hover { border-color: var(--accent); color: var(--accent); }
+        .cat-pill.active { background: var(--accent); color: white; border-color: var(--accent); }
+        .cat-manage-btn { font-size: 0.8rem; padding: 4px 10px; border-radius: 20px; border: 1px dashed var(--border); background: transparent; color: var(--text-muted); cursor: pointer; }
+        .cat-manage-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* Context menu */
+        .context-menu { position: fixed; z-index: 9999; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.2); padding: 6px 0; min-width: 180px; display: none; }
+        .ctx-item { display: flex; align-items: center; gap: 10px; padding: 8px 16px; cursor: pointer; font-size: 0.9rem; color: var(--text-main); transition: background 0.1s; }
+        .ctx-item:hover { background: var(--accent); color: white; }
+        .ctx-item.danger { color: var(--danger); }
+        .ctx-item.danger:hover { background: var(--danger); color: white; }
+        .ctx-sep { height: 1px; background: var(--border); margin: 4px 0; }
+
+        /* Launch feedback */
+        @keyframes launchPulse { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16,185,129,0.4); } 50% { transform: scale(0.97); box-shadow: 0 0 0 6px rgba(16,185,129,0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 transparent; } }
+        .launching { animation: launchPulse 0.6s ease; border-color: var(--success) !important; }
+
+        /* Workflow number badge */
+        .wf-badge { background: rgba(255,255,255,0.25); color: white; font-size: 0.7rem; font-weight: 700; width: 22px; height: 22px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+        /* Empty state */
+        .empty-state { padding: 24px 16px; text-align: center; color: var(--text-muted); font-size: 0.9rem; }
+
+        /* Log viewer */
+        .log-viewer { max-height: 350px; overflow-y: auto; background: var(--bg-color); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.78rem; white-space: pre-wrap; word-break: break-all; color: var(--text-muted); line-height: 1.5; }
+
+        /* Confirm dialog */
+        #confirm-modal { max-width: 380px; text-align: center; }
+        .confirm-items { text-align: left; background: var(--bg-color); border-radius: 8px; padding: 10px 16px; margin: 12px 0; font-size: 0.9rem; max-height: 150px; overflow-y: auto; }
+        .confirm-items div { padding: 3px 0; }
+
+        /* Trial banner */
+        .trial-banner { width: 100%; max-width: 1000px; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 10px 20px; border-radius: 12px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; font-weight: 500; box-sizing: border-box; }
+        .trial-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: background 0.2s; }
+        .trial-btn:hover { background: rgba(255,255,255,0.35); }
+        #license-gate { max-width: 420px; width: 90%; text-align: center; }
+        #license-gate::backdrop { background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); }
+        .license-error { color: var(--danger); font-size: 0.85rem; margin-bottom: 1rem; display: none; }
+    </style>
+</head>
+<body>
+    
+    <div id="trial-banner" class="trial-banner" style="display:none;">
+        <span>⏰ Free Trial: <strong id="trial-days-left">14</strong> days remaining</span>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <a id="trial-buy-link" href="#" target="_blank" rel="noopener" style="color:white; font-size:0.85rem; text-decoration:underline; opacity:0.9;">Buy License</a>
+            <button onclick="openLicenseInput()" class="trial-btn">Enter Key</button>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <div class="status-item"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 14H4v-4h11v4zm0-5H4V9h11v4zm5 5h-4V9h4v9z"/></svg> System RAM: <span class="status-value" id="stat-ram">Loading...</span></div>
+        <div class="status-item"><svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg> CPU: <span class="status-value" id="stat-cpu">Loading...</span></div>
+        <div class="status-item"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg> Local IP: <span class="status-value" id="stat-ip">Loading...</span></div>
+    </div>
+
+    <div class="header-container">
+        <div class="header-left">
+            <h1>Workspace</h1>
+            <span class="subtitle" id="hostname-display">Connecting to local system...</span>
+        </div>
+        <div class="header-right">
+            <button class="btn-icon" onclick="document.getElementById('search-modal').showModal(); document.getElementById('search-input').focus();" title="Search (Ctrl+K)" aria-label="Search"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>
+            <button class="btn-icon" id="theme-toggle" onclick="toggleTheme()" title="Toggle Theme" aria-label="Toggle theme"></button>
+            <button class="btn-icon" onclick="openSettings()" title="Settings" aria-label="Open settings"><svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg></button>
+        </div>
+    </div>
+
+    <div class="category-bar" id="category-bar"></div>
+
+    <div class="dashboard-grid">
+        <div class="section section-workflow">
+            <h2><div style="display:flex; align-items:center; gap:8px;"><svg viewBox="0 0 24 24"><path d="M13 3L4 14h7v7l9-11h-7z"/></svg> 1-Click Routines</div></h2>
+            <div id="workflows-container" class="item-list"></div>
+            <button class="btn-add" onclick="openWorkflowModal()">+ Create Routine</button>
+        </div>
+        <div class="section">
+            <h2><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4zm2 2v8h12V8z"/></svg> Local Applications</h2>
+            <div id="apps-container" class="item-list"></div>
+            <button class="btn-add" onclick="openModal('app')">+ Add Application</button>
+        </div>
+        <div class="section">
+            <h2><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>Websites & Services</h2>
+            <div id="links-container" class="item-list"></div>
+            <button class="btn-add" onclick="openModal('link')">+ Add Web Link</button>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <dialog id="settings-modal">
+        <h2 style="margin-top:0; margin-bottom: 0.2rem; font-size: 1.4rem;">Settings</h2>
+        <div style="color:var(--accent); font-size: 0.85rem; margin-bottom: 1rem; font-weight: 600;" id="app-version-display">Version 1.0.0</div>
+        <div style="background:var(--bg-color); border-radius:10px; padding:12px 16px; margin-bottom:1rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <strong style="font-size:0.9rem;">License</strong>
+                <span id="license-badge" style="background:var(--warning); color:white; padding:2px 8px; border-radius:12px; font-size:0.7rem; font-weight:bold;">TRIAL</span>
+            </div>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px;" id="license-status-text">Checking...</div>
+            <div id="license-activate-row" style="display:flex; gap:6px;">
+                <input type="text" id="settings-license-key" placeholder="License key" style="flex:1; padding:6px 10px; font-size:0.85rem;">
+                <button class="btn-primary" style="padding:6px 12px; font-size:0.8rem;" onclick="activateFromSettings()">Activate</button>
+            </div>
+            <div id="license-active-row" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <code id="license-masked-key" style="font-size:0.8rem; color:var(--text-muted);"></code>
+                    <button class="btn-secondary" style="padding:4px 10px; font-size:0.78rem; color:var(--danger); border-color:var(--danger);" onclick="deactivateLicense()">Deactivate</button>
+                </div>
+            </div>
+        </div>
+        <div class="form-group" style="flex-direction: row; align-items: center; justify-content: space-between;">
+            <div><strong style="display:block; color:var(--text-main);">Launch on Startup</strong><small style="color:var(--text-muted);">Automatically start when Windows boots.</small></div>
+            <label class="switch"><input type="checkbox" id="setting-startup" onchange="toggleStartupSetting(this.checked)"><span class="slider"></span></label>
+        </div>
+        <hr style="border:none; border-top:1px solid var(--border); margin: 1rem 0;">
+        <div style="display:flex; gap:10px; margin-bottom: 1rem;">
+            <button class="btn-secondary" style="flex:1; font-size:0.85rem;" onclick="exportConfig()">📤 Export Config</button>
+            <button class="btn-secondary" style="flex:1; font-size:0.85rem;" onclick="document.getElementById('import-file').click()">📥 Import Config</button>
+            <input type="file" id="import-file" accept=".json" style="display:none">
+        </div>
+        <button class="btn-secondary" style="width:100%; font-size:0.85rem; margin-bottom: 1rem;" onclick="viewLogs()">📋 View Logs</button>
+        <div style="display: flex; justify-content: flex-end; margin-top: 1rem;"><button class="btn-primary" onclick="closeModal('settings-modal')">Done</button></div>
+    </dialog>
+
+    <dialog id="add-modal">
+        <h2 id="modal-title" style="margin-top:0; margin-bottom: 1.5rem; font-size: 1.4rem;">Add Item</h2>
+        <input type="hidden" id="item-type"><input type="hidden" id="item-icon-base64"><input type="hidden" id="item-id">
+        <div id="drop-zone" style="display:none; border: 2px dashed var(--border); border-radius: 8px; padding: 1.5rem 1rem; text-align: center; color: var(--text-muted); margin-bottom: 1.25rem; transition: all 0.2s; cursor: pointer;" onclick="document.getElementById('file-browser').click()">
+            <svg viewBox="0 0 24 24" style="width: 2.5rem; height: 2.5rem; margin-bottom: 0.5rem; fill: var(--text-muted);"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.36 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+            <div>Drag & Drop an app here or <strong style="color:var(--accent)">Browse</strong></div>
+        </div>
+        <input type="file" id="file-browser" style="display: none;" accept=".exe,.lnk,.bat">
+        <button id="btn-scan" class="btn-primary btn-scan" onclick="scanSystem()"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>Scan Computer for Apps</button>
+        <input type="text" id="app-search" placeholder="Search applications..." style="display:none; width: 100%; margin-bottom: 10px; box-sizing: border-box;">
+        <div id="system-apps-list"></div>
+        <div class="form-group"><label>Name</label><input type="text" id="item-name" placeholder="e.g. Photoshop"></div>
+        <div class="form-group"><label id="command-label">Command or URL</label><input type="text" id="item-command" placeholder="e.g. C:\Apps\app.exe"></div>
+        <div class="form-group" id="args-group" style="display:none;"><label>Arguments (Optional)</label><input type="text" id="item-args" placeholder="e.g. --verbose --port=8080"></div>
+        <div class="form-group" id="category-group"><label>Category</label><select id="item-category" style="padding:0.85rem 1rem; border-radius:8px; border:1px solid var(--border); background:var(--bg-color); color:var(--text-main); font-size:1rem;"></select></div>
+        <div class="form-group" id="emoji-picker-group"><label>Select Icon</label><div class="emoji-grid" id="emoji-grid"></div><input type="hidden" id="item-emoji" value="📦"></div>
+        <div id="icon-preview" style="display:none; align-items: center; gap: 12px; margin-bottom: 1.5rem; color: var(--success); font-weight: 500; font-size: 0.9rem;"><img id="preview-img" class="app-icon" src=""><span>✓ Native Icon Extracted</span></div>
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 2rem;"><button class="btn-secondary" onclick="closeModal('add-modal')">Cancel</button><button class="btn-primary" onclick="saveItem()">Save Item</button></div>
+    </dialog>
+
+    <dialog id="workflow-modal">
+        <h2 id="wf-modal-title" style="margin-top:0; margin-bottom: 0.5rem; font-size: 1.4rem;">Create Routine</h2>
+        <p style="color:var(--text-muted); font-size:0.9rem; margin-top:0; margin-bottom: 1.5rem;">Select multiple apps/links to launch at the same time.</p>
+        <input type="hidden" id="wf-id">
+        <div class="form-group"><label>Routine Name</label><input type="text" id="wf-name" placeholder="e.g. Morning Startup"></div>
+        <label>Select Items to Launch:</label>
+        <div id="wf-item-selection" style="max-height: 200px; overflow-y: auto; background: var(--bg-color); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1.5rem;"></div>
+        <div class="form-group"><label>Select Icon</label><div class="emoji-grid" id="wf-emoji-grid"></div><input type="hidden" id="wf-emoji" value="⚡"></div>
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 2rem;"><button class="btn-secondary" onclick="closeModal('workflow-modal')">Cancel</button><button class="btn-primary" onclick="saveWorkflow()">Save Routine</button></div>
+    </dialog>
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Search overlay -->
+    <dialog id="search-modal">
+        <input type="text" id="search-input" class="search-input" placeholder="Search apps, links, routines… (Ctrl+K)" autocomplete="off">
+        <div id="search-results" class="search-results"><div class="search-hint">Start typing to search…</div></div>
+    </dialog>
+
+    <!-- Confirm dialog -->
+    <dialog id="confirm-modal">
+        <h2 style="margin-top:0; font-size:1.3rem;" id="confirm-title">Confirm</h2>
+        <div id="confirm-body"></div>
+        <div style="display:flex; gap:10px; justify-content:center; margin-top:1.5rem;">
+            <button class="btn-secondary" onclick="closeModal('confirm-modal')">Cancel</button>
+            <button class="btn-primary" id="confirm-ok">Launch</button>
+        </div>
+    </dialog>
+
+    <!-- Log viewer -->
+    <dialog id="log-modal" style="max-width:600px; width:90%;">
+        <h2 style="margin-top:0; font-size:1.3rem;">Application Logs</h2>
+        <div id="log-content" class="log-viewer">Loading…</div>
+        <div style="display:flex; justify-content:flex-end; margin-top:1rem;"><button class="btn-primary" onclick="closeModal('log-modal')">Close</button></div>
+    </dialog>
+
+    <!-- Category manager -->
+    <dialog id="cat-modal" style="max-width:400px; width:90%;">
+        <h2 style="margin-top:0; font-size:1.3rem;">Manage Categories</h2>
+        <div id="cat-list" style="margin-bottom:1rem;"></div>
+        <div style="display:flex; gap:8px; margin-bottom:1rem;">
+            <input type="text" id="cat-new-name" placeholder="New category" style="flex:1; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid var(--border); background:var(--bg-color); color:var(--text-main);">
+            <button class="btn-primary" style="padding:0.6rem 1rem;" onclick="addCategory()">Add</button>
+        </div>
+        <div style="display:flex; justify-content:flex-end;"><button class="btn-primary" onclick="saveCategories()">Done</button></div>
+    </dialog>
+
+    <!-- License gate -->
+    <dialog id="license-gate">
+        <div style="font-size:3rem; margin-bottom:0.5rem;">🔒</div>
+        <h2 style="margin:0 0 0.5rem; font-size:1.4rem;">Trial Expired</h2>
+        <p style="color:var(--text-muted); font-size:0.9rem; margin:0 0 1.5rem;">Your 14-day free trial has ended. Enter a license key to continue.</p>
+        <div class="form-group" style="text-align:left;">
+            <label>License Key</label>
+            <input type="text" id="gate-license-key" placeholder="Paste your license key here">
+        </div>
+        <div id="gate-error" class="license-error"></div>
+        <button class="btn-primary" style="width:100%; margin-bottom:0.75rem;" onclick="activateFromGate()">Activate License</button>
+        <a id="gate-buy-link" href="#" target="_blank" rel="noopener" style="color:var(--accent); font-size:0.9rem; text-decoration:none;">Purchase a License →</a>
+    </dialog>
+
+    <!-- Context menu -->
+    <div id="context-menu" class="context-menu"></div>
+
+    <script>
+        // --- Utilities ---
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return '';
+            var el = document.createElement('span');
+            el.textContent = str;
+            return el.innerHTML;
+        }
+
+        function sanitizeUrl(url) {
+            try {
+                var parsed = new URL(url);
+                if (parsed.protocol === 'http:' || parsed.protocol === 'https:') return url;
+            } catch (e) {}
+            return '#';
+        }
+
+        function showToast(message, type) {
+            type = type || 'info';
+            var container = document.getElementById('toast-container');
+            var toast = document.createElement('div');
+            toast.className = 'toast toast-' + type;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(function() { if (toast.parentNode) toast.remove(); }, 3000);
+        }
+
+        // --- Theme ---
+        const themeBtn = document.getElementById('theme-toggle');
+        const sunIcon = '<svg viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41.39.39 1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41.39.39 1.03.39 1.41 0l1.06-1.06z"/></svg>';
+        const moonIcon = '<svg viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>';
+        const currentTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        themeBtn.innerHTML = currentTheme === 'dark' ? sunIcon : moonIcon;
+
+        function toggleTheme() {
+            var newTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            themeBtn.innerHTML = newTheme === 'dark' ? sunIcon : moonIcon;
+        }
+
+        // --- State ---
+        const emojis = ['📦','🌐','🧮','📝','📁','🎵','🎮','📸','⚙️','💬','📧','📅','📊','🎨','🔒','💻','⚡','☕','🚀'];
+        let systemAppsCache = [];
+        let allSavedItems = [];
+        let currentConfig = null;
+        let draggedItem = null;
+        let selectedCategory = localStorage.getItem('selectedCategory') || 'All';
+        let editableCategories = [];
+
+        // --- Stats Polling with Backoff ---
+        let statsFailCount = 0;
+
+        async function fetchStats() {
+            try {
+                var res = await fetch('/api/stats');
+                var data = await res.json();
+                document.getElementById('stat-ip').innerText = data.ip;
+                document.getElementById('stat-ram').innerText = data.ram;
+                document.getElementById('stat-cpu').innerText = data.cpu;
+                statsFailCount = 0;
+            } catch (e) {
+                statsFailCount++;
+                if (statsFailCount >= 3) {
+                    document.getElementById('stat-ram').innerText = 'Offline';
+                    document.getElementById('stat-ip').innerText = 'Offline';
+                    document.getElementById('stat-cpu').innerText = 'Offline';
+                }
+            }
+            setTimeout(fetchStats, statsFailCount >= 3 ? 10000 : 2000);
+        }
+        fetchStats();
+
+        // --- Settings ---
+        async function loadSettings() {
+            try {
+                var res = await fetch('/api/settings');
+                var settings = await res.json();
+                document.getElementById('setting-startup').checked = settings.startup || false;
+            } catch (e) {}
+        }
+
+        async function toggleStartupSetting(isChecked) {
+            try {
+                await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ startup: isChecked })
+                });
+                showToast(isChecked ? 'Startup enabled' : 'Startup disabled', 'success');
+            } catch (e) {
+                showToast('Failed to update setting', 'error');
+            }
+        }
+
+        function openSettings() {
+            document.getElementById('settings-modal').showModal();
+        }
+
+        // --- Import / Export ---
+        async function exportConfig() {
+            try {
+                var res = await fetch('/api/export');
+                var data = await res.json();
+                var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                var a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'smart-workspace-config.json';
+                a.click();
+                URL.revokeObjectURL(a.href);
+                showToast('Config exported', 'success');
+            } catch (e) {
+                showToast('Export failed', 'error');
+            }
+        }
+
+        document.getElementById('import-file').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = async function(ev) {
+                try {
+                    var config = JSON.parse(ev.target.result);
+                    if (!confirm('This will replace your current configuration. Continue?')) return;
+                    await fetch('/api/import', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(config)
+                    });
+                    showToast('Config imported', 'success');
+                    loadDashboard();
+                } catch (err) {
+                    showToast('Invalid config file', 'error');
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        });
+
+        // --- Log Viewer ---
+        async function viewLogs() {
+            document.getElementById('log-content').textContent = 'Loading…';
+            document.getElementById('log-modal').showModal();
+            try {
+                var res = await fetch('/api/logs');
+                var data = await res.json();
+                document.getElementById('log-content').textContent = data.lines.length > 0 ? data.lines.join('\n') : 'No log entries yet.';
+            } catch (e) {
+                document.getElementById('log-content').textContent = 'Failed to load logs.';
+            }
+        }
+
+        // --- Licensing ---
+        var licenseState = null;
+
+        async function checkLicense() {
+            try {
+                var res = await fetch('/api/license');
+                licenseState = await res.json();
+            } catch (e) {
+                licenseState = { status: 'trial', days_remaining: 99 };
+            }
+            updateLicenseUI();
+            if (licenseState.status === 'expired') {
+                document.getElementById('license-gate').showModal();
+                return false;
+            }
+            return true;
+        }
+
+        function updateLicenseUI() {
+            var banner = document.getElementById('trial-banner');
+            var badge = document.getElementById('license-badge');
+            var statusText = document.getElementById('license-status-text');
+            var activateRow = document.getElementById('license-activate-row');
+            var activeRow = document.getElementById('license-active-row');
+
+            if (licenseState.status === 'active') {
+                banner.style.display = 'none';
+                badge.textContent = 'ACTIVE';
+                badge.style.background = 'var(--success)';
+                statusText.textContent = 'Licensed — ' + (licenseState.license_key || '');
+                activateRow.style.display = 'none';
+                activeRow.style.display = 'block';
+                document.getElementById('license-masked-key').textContent = licenseState.license_key || '';
+            } else if (licenseState.status === 'trial') {
+                banner.style.display = 'flex';
+                document.getElementById('trial-days-left').textContent = licenseState.days_remaining;
+                badge.textContent = 'TRIAL';
+                badge.style.background = 'var(--warning)';
+                statusText.textContent = licenseState.days_remaining + ' days remaining in free trial';
+                activateRow.style.display = 'flex';
+                activeRow.style.display = 'none';
+            } else {
+                banner.style.display = 'none';
+                badge.textContent = 'EXPIRED';
+                badge.style.background = 'var(--danger)';
+                statusText.textContent = 'Trial expired — enter a license key';
+                activateRow.style.display = 'flex';
+                activeRow.style.display = 'none';
+            }
+            var sUrl = licenseState.store_url || '';
+            ['trial-buy-link', 'gate-buy-link'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) { if (sUrl) { el.href = sUrl; el.style.display = ''; } else { el.style.display = 'none'; } }
+            });
+        }
+
+        document.getElementById('license-gate').addEventListener('cancel', function(e) {
+            if (licenseState && licenseState.status === 'expired') e.preventDefault();
+        });
+
+        function openLicenseInput() {
+            openSettings();
+            setTimeout(function() { document.getElementById('settings-license-key').focus(); }, 200);
+        }
+
+        async function activateFromGate() {
+            var key = document.getElementById('gate-license-key').value.trim();
+            if (!key) return;
+            var errDiv = document.getElementById('gate-error');
+            errDiv.style.display = 'none';
+            try {
+                var res = await fetch('/api/license/activate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ license_key: key })
+                });
+                var data = await res.json();
+                if (data.success) {
+                    document.getElementById('license-gate').close();
+                    showToast('License activated!', 'success');
+                    await checkLicense();
+                    loadDashboard();
+                } else {
+                    errDiv.textContent = data.error || 'Activation failed';
+                    errDiv.style.display = 'block';
+                }
+            } catch (e) {
+                errDiv.textContent = 'Could not reach license server';
+                errDiv.style.display = 'block';
+            }
+        }
+
+        async function activateFromSettings() {
+            var key = document.getElementById('settings-license-key').value.trim();
+            if (!key) return showToast('Enter a license key', 'error');
+            try {
+                var res = await fetch('/api/license/activate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ license_key: key })
+                });
+                var data = await res.json();
+                if (data.success) {
+                    showToast('License activated!', 'success');
+                    document.getElementById('settings-license-key').value = '';
+                    await checkLicense();
+                } else {
+                    showToast(data.error || 'Activation failed', 'error');
+                }
+            } catch (e) {
+                showToast('Could not reach license server', 'error');
+            }
+        }
+
+        async function deactivateLicense() {
+            if (!confirm('Deactivate your license on this device?')) return;
+            try {
+                await fetch('/api/license/deactivate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+                showToast('License deactivated', 'success');
+                await checkLicense();
+            } catch (e) {
+                showToast('Deactivation failed', 'error');
+            }
+        }
+
+        // --- Category Bar ---
+        function renderCategoryBar() {
+            var bar = document.getElementById('category-bar');
+            var cats = currentConfig ? currentConfig.categories || ['General'] : ['General'];
+            bar.innerHTML = '';
+            var allBtn = document.createElement('button');
+            allBtn.className = 'cat-pill' + (selectedCategory === 'All' ? ' active' : '');
+            allBtn.textContent = 'All';
+            allBtn.onclick = function() { selectedCategory = 'All'; localStorage.setItem('selectedCategory', 'All'); renderCategoryBar(); filterDashboard(); };
+            bar.appendChild(allBtn);
+            cats.forEach(function(cat) {
+                var btn = document.createElement('button');
+                btn.className = 'cat-pill' + (selectedCategory === cat ? ' active' : '');
+                btn.textContent = cat;
+                btn.onclick = function() { selectedCategory = cat; localStorage.setItem('selectedCategory', cat); renderCategoryBar(); filterDashboard(); };
+                bar.appendChild(btn);
+            });
+            var manageBtn = document.createElement('button');
+            manageBtn.className = 'cat-manage-btn';
+            manageBtn.textContent = '✏️ Manage';
+            manageBtn.onclick = openCategoryManager;
+            bar.appendChild(manageBtn);
+        }
+
+        function filterDashboard() {
+            if (selectedCategory === 'All') {
+                document.querySelectorAll('.item-row').forEach(function(el) { el.style.display = ''; });
+                return;
+            }
+            document.querySelectorAll('.item-row[data-category]').forEach(function(el) {
+                el.style.display = (el.dataset.category === selectedCategory) ? '' : 'none';
+            });
+        }
+
+        // --- Category Manager ---
+        function openCategoryManager() {
+            editableCategories = currentConfig ? (currentConfig.categories || ['General']).slice() : ['General'];
+            renderCatList();
+            document.getElementById('cat-modal').showModal();
+        }
+
+        function renderCatList() {
+            var listDiv = document.getElementById('cat-list');
+            listDiv.innerHTML = '';
+            editableCategories.forEach(function(cat, i) {
+                listDiv.innerHTML += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">' +
+                    '<input type="text" value="' + escapeHtml(cat) + '" style="flex:1; padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-color); color:var(--text-main);" onchange="editableCategories[' + i + ']=this.value">' +
+                    (editableCategories.length > 1 ? '<button class="btn-icon" style="width:30px; height:30px; color:var(--danger); font-size:1.1rem;" onclick="editableCategories.splice(' + i + ',1); renderCatList();">×</button>' : '') +
+                    '</div>';
+            });
+        }
+
+        function addCategory() {
+            var name = document.getElementById('cat-new-name').value.trim();
+            if (!name) return;
+            editableCategories.push(name);
+            document.getElementById('cat-new-name').value = '';
+            renderCatList();
+        }
+
+        async function saveCategories() {
+            editableCategories = editableCategories.map(function(c) { return c.trim(); }).filter(Boolean);
+            if (editableCategories.length === 0) editableCategories = ['General'];
+            try {
+                await fetch('/api/categories', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ categories: editableCategories })
+                });
+                closeModal('cat-modal');
+                showToast('Categories saved', 'success');
+                loadDashboard();
+            } catch (e) {
+                showToast('Failed to save categories', 'error');
+            }
+        }
+
+        function populateCategorySelect(selected) {
+            var sel = document.getElementById('item-category');
+            sel.innerHTML = '';
+            var cats = currentConfig ? currentConfig.categories || ['General'] : ['General'];
+            cats.forEach(function(cat) {
+                var opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                if (cat === selected) opt.selected = true;
+                sel.appendChild(opt);
+            });
+        }
+
+        // --- Dashboard ---
+        async function loadDashboard() {
+            ['workflows-container', 'apps-container', 'links-container'].forEach(function(id) {
+                document.getElementById(id).innerHTML =
+                    '<div class="loading-skeleton"></div><div class="loading-skeleton"></div>';
+            });
+
+            try {
+                loadSettings();
+                var res = await fetch('/api/config');
+                var data = await res.json();
+                currentConfig = data;
+                document.getElementById('hostname-display').innerText = 'Running on ' + escapeHtml(data.hostname);
+                document.getElementById('app-version-display').innerText = 'Version ' + escapeHtml(data.version);
+                allSavedItems = [].concat(data.localApps, data.webLinks);
+                renderCategoryBar();
+
+                // --- Workflows ---
+                var wfContainer = document.getElementById('workflows-container');
+                wfContainer.innerHTML = '';
+                if (data.workflows.length === 0) {
+                    wfContainer.innerHTML = '<div class="empty-state">⚡ Create a routine to launch multiple apps at once</div>';
+                }
+                data.workflows.forEach(function(wf, idx) {
+                    var safeName = escapeHtml(wf.name);
+                    var safeIcon = escapeHtml(wf.icon);
+                    var safeId = escapeHtml(wf.id);
+                    var badge = idx < 9 ? '<span class="wf-badge">' + (idx + 1) + '</span> ' : '';
+                    wfContainer.innerHTML +=
+                        '<div class="item-row workflow-row" draggable="true" data-id="' + safeId + '" data-type="workflow"' +
+                        ' ondragstart="handleDragStart(event)" ondragover="handleDragOver(event)"' +
+                        ' ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)"' +
+                        ' ondrop="handleDrop(event, \'workflow\')" ondragend="handleDragEnd(event)"' +
+                        ' oncontextmenu="showContextMenu(event, \'' + safeId + '\', \'workflow\')"' +
+                        ' onclick="confirmLaunchWorkflow(\'' + safeId + '\', this)">' +
+                        '<div class="item-content">' + badge + '<span class="emoji-icon">' + safeIcon + '</span> ' + safeName + ' (' + wf.items.length + ' items)</div>' +
+                        '<div class="item-actions">' +
+                        '<button class="btn-edit" aria-label="Edit ' + safeName + '" style="color:white; opacity:0.8;"' +
+                        ' onmouseover="this.style.opacity=1; this.style.background=\'rgba(255,255,255,0.2)\'"' +
+                        ' onmouseout="this.style.opacity=0.8; this.style.background=\'transparent\'"' +
+                        ' onclick="event.stopPropagation(); editItem(\'' + safeId + '\', \'workflow\')" title="Edit">✏️</button>' +
+                        '<button class="btn-delete" aria-label="Delete ' + safeName + '"' +
+                        ' onclick="event.stopPropagation(); deleteItem(\'' + safeId + '\')">' +
+                        '<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>' +
+                        '</div></div>';
+                });
+
+                // --- Apps ---
+                var appsContainer = document.getElementById('apps-container');
+                appsContainer.innerHTML = '';
+                if (data.localApps.length === 0) {
+                    appsContainer.innerHTML = '<div class="empty-state">💻 Scan your computer or drag an .exe to add apps</div>';
+                }
+                data.localApps.forEach(function(app) {
+                    var safeName = escapeHtml(app.name);
+                    var safeId = escapeHtml(app.id);
+                    var safeIcon = escapeHtml(app.icon);
+                    var safeCat = escapeHtml(app.category || 'General');
+                    var iconHtml = app.iconBase64
+                        ? '<img src="' + app.iconBase64 + '" class="app-icon" alt="">'
+                        : '<span class="emoji-icon">' + safeIcon + '</span>';
+                    var safeCommand = app.command.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    var safeArgs = (app.args || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    appsContainer.innerHTML +=
+                        '<div class="item-row" draggable="true" data-id="' + safeId + '" data-type="app" data-category="' + safeCat + '"' +
+                        ' ondragstart="handleDragStart(event)" ondragover="handleDragOver(event)"' +
+                        ' ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)"' +
+                        ' ondrop="handleDrop(event, \'app\')" ondragend="handleDragEnd(event)"' +
+                        ' oncontextmenu="showContextMenu(event, \'' + safeId + '\', \'app\')"' +
+                        ' onclick="launchApp(\'' + safeCommand + '\', \'' + safeArgs + '\', this)">' +
+                        '<div class="item-content">' + iconHtml + ' ' + safeName + '</div>' +
+                        '<div class="item-actions">' +
+                        '<button class="btn-edit" aria-label="Edit ' + safeName + '"' +
+                        ' onclick="event.stopPropagation(); editItem(\'' + safeId + '\', \'app\')" title="Edit">✏️</button>' +
+                        '<button class="btn-delete" aria-label="Delete ' + safeName + '"' +
+                        ' onclick="event.stopPropagation(); deleteItem(\'' + safeId + '\')">' +
+                        '<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>' +
+                        '</div></div>';
+                });
+
+                // --- Links ---
+                var linksContainer = document.getElementById('links-container');
+                linksContainer.innerHTML = '';
+                if (data.webLinks.length === 0) {
+                    linksContainer.innerHTML = '<div class="empty-state">🌐 Add your favorite websites and services</div>';
+                }
+                data.webLinks.forEach(function(link) {
+                    var safeName = escapeHtml(link.name);
+                    var safeId = escapeHtml(link.id);
+                    var safeIcon = escapeHtml(link.icon || '🌐');
+                    var safeCat = escapeHtml(link.category || 'General');
+                    var safeUrl = sanitizeUrl(link.url);
+                    linksContainer.innerHTML +=
+                        '<a href="' + escapeHtml(safeUrl) + '" target="_blank" rel="noopener" class="item-row"' +
+                        ' draggable="true" data-id="' + safeId + '" data-type="link" data-category="' + safeCat + '"' +
+                        ' ondragstart="handleDragStart(event)" ondragover="handleDragOver(event)"' +
+                        ' ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)"' +
+                        ' ondrop="handleDrop(event, \'link\')" ondragend="handleDragEnd(event)"' +
+                        ' oncontextmenu="showContextMenu(event, \'' + safeId + '\', \'link\')">' +
+                        '<div class="item-content"><span class="emoji-icon">' + safeIcon + '</span> ' + safeName + '</div>' +
+                        '<div class="item-actions">' +
+                        '<button class="btn-edit" aria-label="Edit ' + safeName + '"' +
+                        ' onclick="event.preventDefault(); editItem(\'' + safeId + '\', \'link\')" title="Edit">✏️</button>' +
+                        '<button class="btn-delete" aria-label="Delete ' + safeName + '"' +
+                        ' onclick="event.preventDefault(); deleteItem(\'' + safeId + '\')">' +
+                        '<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>' +
+                        '</div></a>';
+                });
+
+                filterDashboard();
+            } catch (error) {
+                document.getElementById('hostname-display').innerText = 'Working offline';
+                ['workflows-container', 'apps-container', 'links-container'].forEach(function(id) {
+                    document.getElementById(id).innerHTML = '';
+                });
+                showToast('Could not connect to server', 'error');
+            }
+        }
+
+        // --- Emoji Grid ---
+        function populateEmojiGrid(gridId, inputId) {
+            var grid = document.getElementById(gridId);
+            grid.innerHTML = '';
+            emojis.forEach(function(emoji) {
+                var btn = document.createElement('button');
+                btn.className = 'emoji-btn';
+                btn.type = 'button';
+                btn.innerText = emoji;
+                btn.setAttribute('aria-label', 'Select emoji ' + emoji);
+                btn.onclick = function() {
+                    document.querySelectorAll('#' + gridId + ' .emoji-btn').forEach(function(b) { b.classList.remove('selected'); });
+                    btn.classList.add('selected');
+                    document.getElementById(inputId).value = emoji;
+                    if (gridId === 'emoji-grid') {
+                        document.getElementById('item-icon-base64').value = '';
+                        document.getElementById('icon-preview').style.display = 'none';
+                    }
+                };
+                grid.appendChild(btn);
+            });
+        }
+        populateEmojiGrid('emoji-grid', 'item-emoji');
+        populateEmojiGrid('wf-emoji-grid', 'wf-emoji');
+
+        // --- Modals ---
+        function openModal(type) {
+            document.getElementById('item-id').value = '';
+            document.getElementById('item-type').value = type;
+            document.getElementById('modal-title').innerText = type === 'app' ? 'Add Application' : 'Add Web Link';
+            document.getElementById('command-label').innerText = type === 'app' ? 'Application Path' : 'Website URL';
+            document.getElementById('item-name').value = '';
+            document.getElementById('item-command').value = '';
+            document.getElementById('item-icon-base64').value = '';
+            document.getElementById('item-emoji').value = '📦';
+            document.getElementById('item-args').value = '';
+            document.getElementById('args-group').style.display = type === 'app' ? '' : 'none';
+            document.querySelectorAll('#emoji-grid .emoji-btn').forEach(function(b) { b.classList.remove('selected'); });
+            document.getElementById('icon-preview').style.display = 'none';
+            document.getElementById('system-apps-list').style.display = 'none';
+            document.getElementById('app-search').style.display = 'none';
+            document.getElementById('btn-scan').style.display = type === 'app' ? 'flex' : 'none';
+            document.getElementById('drop-zone').style.display = type === 'app' ? 'block' : 'none';
+            populateCategorySelect('General');
+            document.getElementById('add-modal').showModal();
+        }
+
+        function openWorkflowModal() {
+            document.getElementById('wf-id').value = '';
+            document.getElementById('wf-name').value = '';
+            document.getElementById('wf-emoji').value = '⚡';
+            document.getElementById('wf-modal-title').innerText = 'Create Routine';
+            document.querySelectorAll('#wf-emoji-grid .emoji-btn').forEach(function(b) { b.classList.remove('selected'); });
+            var selectionDiv = document.getElementById('wf-item-selection');
+            selectionDiv.innerHTML = '';
+            if (allSavedItems.length === 0) {
+                selectionDiv.innerHTML = '<div style="padding:15px; color:var(--text-muted);">Please add some Apps or Web Links first!</div>';
+            } else {
+                allSavedItems.forEach(function(item) {
+                    var safeId = escapeHtml(item.id);
+                    var safeName = escapeHtml(item.name);
+                    var iconDisplay = item.iconBase64 ? '🖼️' : escapeHtml(item.icon);
+                    selectionDiv.innerHTML += '<label class="wf-item-select"><input type="checkbox" value="' + safeId + '"> ' + iconDisplay + ' ' + safeName + '</label>';
+                });
+            }
+            document.getElementById('workflow-modal').showModal();
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).close();
+        }
+
+        // --- System Scan ---
+        async function scanSystem() {
+            var btn = document.getElementById('btn-scan');
+            var originalContent = btn.innerHTML;
+            btn.innerHTML = 'Scanning system...';
+            btn.disabled = true;
+            try {
+                var res = await fetch('/api/system-apps');
+                systemAppsCache = await res.json();
+                if (systemAppsCache.length === 0) {
+                    document.getElementById('system-apps-list').innerHTML = '<div style="padding: 15px; text-align: center; color: var(--text-muted);">No apps found.</div>';
+                } else {
+                    renderAppList(systemAppsCache);
+                }
+                document.getElementById('system-apps-list').style.display = 'block';
+                document.getElementById('app-search').style.display = 'block';
+            } catch (e) {
+                showToast('System scan failed', 'error');
+            }
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+        }
+
+        function renderAppList(apps) {
+            document.getElementById('system-apps-list').innerHTML = apps.map(function(app) {
+                var safeName = escapeHtml(app.name);
+                var safePath = escapeHtml(app.path);
+                var jsName = app.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                var jsPath = app.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                return '<div class="sys-app-item" onclick="selectSystemApp(\'' + jsName + '\', \'' + jsPath + '\')">' +
+                    '<span style="font-size:1.2rem">📦</span> <div><strong style="color:var(--text-main)">' + safeName + '</strong><br>' +
+                    '<small style="color:var(--text-muted)">' + safePath + '</small></div></div>';
+            }).join('');
+        }
+
+        document.getElementById('app-search').addEventListener('input', function(e) {
+            renderAppList(systemAppsCache.filter(function(app) {
+                return app.name.toLowerCase().includes(e.target.value.toLowerCase());
+            }));
+        });
+
+        async function selectSystemApp(name, appPath) {
+            document.getElementById('item-name').value = name;
+            document.getElementById('item-command').value = appPath;
+            document.getElementById('system-apps-list').style.display = 'none';
+            document.getElementById('app-search').style.display = 'none';
+            document.getElementById('icon-preview').style.display = 'flex';
+            document.getElementById('preview-img').style.display = 'none';
+            document.querySelector('#icon-preview span').innerText = 'Extracting icon...';
+            try {
+                var res = await fetch('/api/extract-icon', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: appPath })
+                });
+                var data = await res.json();
+                if (data.icon) {
+                    document.getElementById('item-icon-base64').value = data.icon;
+                    document.getElementById('preview-img').src = data.icon;
+                    document.getElementById('preview-img').style.display = 'block';
+                    document.querySelector('#icon-preview span').innerText = 'Native Icon Extracted';
+                } else {
+                    document.getElementById('icon-preview').style.display = 'none';
+                }
+            } catch (e) {
+                document.getElementById('icon-preview').style.display = 'none';
+            }
+        }
+
+        // --- Save / Edit / Delete ---
+        async function saveItem() {
+            var id = document.getElementById('item-id').value;
+            var type = document.getElementById('item-type').value;
+            var name = document.getElementById('item-name').value;
+            var commandOrUrl = document.getElementById('item-command').value;
+            var iconBase64 = document.getElementById('item-icon-base64').value;
+            var emojiIcon = document.getElementById('item-emoji').value;
+            var category = document.getElementById('item-category').value;
+            if (!name || !commandOrUrl) return showToast('Name and Path/URL are required', 'error');
+            var payload = { type: type, name: name, icon: emojiIcon, category: category };
+            if (iconBase64) payload.iconBase64 = iconBase64;
+            if (type === 'app') {
+                payload.command = commandOrUrl;
+                payload.args = document.getElementById('item-args').value;
+            } else {
+                payload.url = commandOrUrl;
+            }
+            if (id) payload.id = id;
+            try {
+                await fetch(id ? '/api/edit' : '/api/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                closeModal('add-modal');
+                showToast(id ? 'Item updated' : 'Item added', 'success');
+                loadDashboard();
+            } catch (e) {
+                showToast('Failed to save item', 'error');
+            }
+        }
+
+        async function saveWorkflow() {
+            var id = document.getElementById('wf-id').value;
+            var name = document.getElementById('wf-name').value;
+            var icon = document.getElementById('wf-emoji').value;
+            var checkboxes = document.querySelectorAll('#wf-item-selection input:checked');
+            var itemIds = Array.from(checkboxes).map(function(cb) { return cb.value; });
+            if (!name || itemIds.length === 0) return showToast('Please provide a name and select at least one item', 'error');
+            var payload = { type: 'workflow', name: name, icon: icon, items: itemIds };
+            if (id) payload.id = id;
+            try {
+                await fetch(id ? '/api/edit' : '/api/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                closeModal('workflow-modal');
+                showToast(id ? 'Routine updated' : 'Routine created', 'success');
+                loadDashboard();
+            } catch (e) {
+                showToast('Failed to save routine', 'error');
+            }
+        }
+
+        function editItem(id, type) {
+            if (!currentConfig) return;
+            var item;
+            if (type === 'workflow') item = currentConfig.workflows.find(function(w) { return w.id === id; });
+            else if (type === 'app') item = currentConfig.localApps.find(function(a) { return a.id === id; });
+            else item = currentConfig.webLinks.find(function(l) { return l.id === id; });
+            if (!item) return;
+
+            if (type === 'workflow') {
+                document.getElementById('wf-id').value = item.id;
+                document.getElementById('wf-name').value = item.name;
+                document.getElementById('wf-emoji').value = item.icon;
+                document.getElementById('wf-modal-title').innerText = 'Edit Routine';
+                document.querySelectorAll('#wf-emoji-grid .emoji-btn').forEach(function(b) {
+                    b.classList.remove('selected');
+                    if (b.innerText === item.icon) b.classList.add('selected');
+                });
+                var selectionDiv = document.getElementById('wf-item-selection');
+                selectionDiv.innerHTML = '';
+                allSavedItems.forEach(function(i) {
+                    var checked = item.items.includes(i.id) ? 'checked' : '';
+                    var safeId = escapeHtml(i.id);
+                    var safeName = escapeHtml(i.name);
+                    var iconDisplay = i.iconBase64 ? '🖼️' : escapeHtml(i.icon);
+                    selectionDiv.innerHTML += '<label class="wf-item-select"><input type="checkbox" value="' + safeId + '" ' + checked + '> ' + iconDisplay + ' ' + safeName + '</label>';
+                });
+                document.getElementById('workflow-modal').showModal();
+            } else {
+                document.getElementById('item-id').value = item.id;
+                document.getElementById('item-type').value = type;
+                document.getElementById('modal-title').innerText = type === 'app' ? 'Edit Application' : 'Edit Web Link';
+                document.getElementById('item-name').value = item.name;
+                document.getElementById('item-command').value = type === 'app' ? item.command : item.url;
+                document.getElementById('item-icon-base64').value = item.iconBase64 || '';
+                document.getElementById('item-emoji').value = item.icon || '📦';
+                document.getElementById('item-args').value = item.args || '';
+                document.getElementById('args-group').style.display = type === 'app' ? '' : 'none';
+                document.getElementById('drop-zone').style.display = type === 'app' ? 'block' : 'none';
+                document.getElementById('btn-scan').style.display = type === 'app' ? 'flex' : 'none';
+                populateCategorySelect(item.category || 'General');
+                document.querySelectorAll('#emoji-grid .emoji-btn').forEach(function(b) {
+                    b.classList.remove('selected');
+                    if (b.innerText === item.icon) b.classList.add('selected');
+                });
+                if (item.iconBase64) {
+                    document.getElementById('preview-img').src = item.iconBase64;
+                    document.getElementById('preview-img').style.display = 'block';
+                    document.getElementById('icon-preview').style.display = 'flex';
+                    document.querySelector('#icon-preview span').innerText = 'Native Icon Retained';
+                } else {
+                    document.getElementById('icon-preview').style.display = 'none';
+                }
+                document.getElementById('add-modal').showModal();
+            }
+        }
+
+        // --- Drag and Drop ---
+        function handleDragStart(e) {
+            draggedItem = e.currentTarget;
+            e.dataTransfer.effectAllowed = 'move';
+            setTimeout(function() { draggedItem.classList.add('dragging'); }, 0);
+        }
+        function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; return false; }
+        function handleDragEnter(e) {
+            e.preventDefault();
+            if (e.currentTarget !== draggedItem) e.currentTarget.classList.add('drag-over');
+        }
+        function handleDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+        function handleDragEnd(e) {
+            e.currentTarget.classList.remove('dragging');
+            document.querySelectorAll('.item-row').forEach(function(row) { row.classList.remove('drag-over'); });
+            draggedItem = null;
+        }
+        function handleDrop(e, type) {
+            e.stopPropagation();
+            var target = e.currentTarget;
+            target.classList.remove('drag-over');
+            if (draggedItem && draggedItem !== target && draggedItem.dataset.type === type) {
+                var bounding = target.getBoundingClientRect();
+                var offset = bounding.y + (bounding.height / 2);
+                if (e.clientY - offset > 0) target.parentNode.insertBefore(draggedItem, target.nextSibling);
+                else target.parentNode.insertBefore(draggedItem, target);
+                var order = Array.from(target.parentNode.children)
+                    .filter(function(el) { return el.classList.contains('item-row'); })
+                    .map(function(row) { return row.dataset.id; });
+                fetch('/api/reorder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: type, order: order })
+                });
+            }
+            return false;
+        }
+
+        // --- File Drop Zone ---
+        var dropZone = document.getElementById('drop-zone');
+        dropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            dropZone.style.borderColor = 'var(--accent)';
+            dropZone.style.backgroundColor = 'rgba(37, 99, 235, 0.05)';
+        });
+        dropZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            dropZone.style.borderColor = 'var(--border)';
+            dropZone.style.backgroundColor = 'transparent';
+        });
+        dropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            dropZone.style.borderColor = 'var(--border)';
+            dropZone.style.backgroundColor = 'transparent';
+            if (e.dataTransfer.files.length > 0) handleSelectedFile(e.dataTransfer.files[0]);
+        });
+        document.getElementById('file-browser').addEventListener('change', function(e) {
+            if (e.target.files.length > 0) handleSelectedFile(e.target.files[0]);
+        });
+        function handleSelectedFile(file) {
+            if (!file.path) return showToast('Could not read file path', 'error');
+            var fileName = file.name.replace(/\.[^/.]+$/, '');
+            selectSystemApp(fileName, file.path);
+        }
+
+        // --- Launch Feedback ---
+        function applyLaunchFeedback(el) {
+            if (!el) return;
+            el.classList.add('launching');
+            el.addEventListener('animationend', function handler() {
+                el.classList.remove('launching');
+                el.removeEventListener('animationend', handler);
+            });
+        }
+
+        // --- Actions ---
+        async function deleteItem(id) {
+            if (confirm('Remove this item?')) {
+                try {
+                    await fetch('/api/delete/' + id, { method: 'DELETE' });
+                    showToast('Item removed', 'success');
+                    loadDashboard();
+                } catch (e) {
+                    showToast('Failed to remove item', 'error');
+                }
+            }
+        }
+
+        async function launchApp(command, args, el) {
+            applyLaunchFeedback(el);
+            var cleanCmd = command.replace(/&quot;/g, '"');
+            var cleanArgs = (args || '').replace(/&quot;/g, '"');
+            try {
+                var res = await fetch('/api/launch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: cleanCmd, args: cleanArgs || undefined })
+                });
+                var data = await res.json();
+                if (!data.success) showToast('Failed to launch application', 'error');
+            } catch (e) {
+                showToast('Failed to launch application', 'error');
+            }
+        }
+
+        // --- Routine Launch Confirmation ---
+        function confirmLaunchWorkflow(id, el) {
+            if (localStorage.getItem('skipRoutineConfirm') === 'true') {
+                doLaunchWorkflow(id, el);
+                return;
+            }
+            if (!currentConfig) return;
+            var wf = currentConfig.workflows.find(function(w) { return w.id === id; });
+            if (!wf) return;
+            var itemNames = wf.items.map(function(itemId) {
+                var found = allSavedItems.find(function(i) { return i.id === itemId; });
+                return found ? found.name : 'Unknown';
+            });
+            document.getElementById('confirm-title').textContent = 'Launch "' + wf.name + '"?';
+            var body = document.getElementById('confirm-body');
+            body.innerHTML = '<div class="confirm-items">' +
+                itemNames.map(function(n) { return '<div>• ' + escapeHtml(n) + '</div>'; }).join('') +
+                '</div>' +
+                '<label style="font-size:0.8rem; color:var(--text-muted); cursor:pointer;">' +
+                '<input type="checkbox" id="skip-confirm-cb"> Don\'t ask again</label>';
+            var okBtn = document.getElementById('confirm-ok');
+            okBtn.onclick = function() {
+                if (document.getElementById('skip-confirm-cb').checked) {
+                    localStorage.setItem('skipRoutineConfirm', 'true');
+                }
+                closeModal('confirm-modal');
+                doLaunchWorkflow(id, el);
+            };
+            document.getElementById('confirm-modal').showModal();
+        }
+
+        async function doLaunchWorkflow(id, el) {
+            applyLaunchFeedback(el);
+            try {
+                var res = await fetch('/api/launch-workflow', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id })
+                });
+                var data = await res.json();
+                if (data.success) showToast('Routine launched', 'success');
+                else showToast('Some items failed to launch', 'error');
+            } catch (e) {
+                showToast('Failed to launch routine', 'error');
+            }
+        }
+
+        // --- Right-Click Context Menu ---
+        function showContextMenu(e, id, type) {
+            e.preventDefault();
+            e.stopPropagation();
+            var menu = document.getElementById('context-menu');
+            var item;
+            if (type === 'app') item = currentConfig.localApps.find(function(a) { return a.id === id; });
+            else if (type === 'link') item = currentConfig.webLinks.find(function(l) { return l.id === id; });
+            else item = currentConfig.workflows.find(function(w) { return w.id === id; });
+            if (!item) return;
+
+            var launchLabel = type === 'workflow' ? 'Launch Routine' : 'Launch';
+            var copyLabel = type === 'app' ? 'Copy Path' : type === 'link' ? 'Copy URL' : null;
+            var copyValue = type === 'app' ? item.command : type === 'link' ? item.url : null;
+
+            menu.innerHTML =
+                '<div class="ctx-item" onclick="ctxLaunch(\'' + escapeHtml(id) + '\', \'' + type + '\')">' + launchLabel + '</div>' +
+                '<div class="ctx-sep"></div>' +
+                '<div class="ctx-item" onclick="editItem(\'' + escapeHtml(id) + '\', \'' + type + '\'); hideContextMenu();">Edit</div>' +
+                (copyValue ? '<div class="ctx-item" onclick="navigator.clipboard.writeText(\'' + escapeHtml(copyValue).replace(/'/g, "\\'") + '\'); showToast(\'Copied!\', \'success\'); hideContextMenu();">📋 ' + copyLabel + '</div>' : '') +
+                '<div class="ctx-sep"></div>' +
+                '<div class="ctx-item danger" onclick="deleteItem(\'' + escapeHtml(id) + '\'); hideContextMenu();">Delete</div>';
+
+            menu.style.display = 'block';
+            menu.style.left = Math.min(e.clientX, window.innerWidth - 200) + 'px';
+            menu.style.top = Math.min(e.clientY, window.innerHeight - 200) + 'px';
+        }
+
+        function ctxLaunch(id, type) {
+            hideContextMenu();
+            if (type === 'workflow') {
+                confirmLaunchWorkflow(id, document.querySelector('[data-id="' + id + '"]'));
+            } else if (type === 'app') {
+                var app = currentConfig.localApps.find(function(a) { return a.id === id; });
+                if (app) launchApp(app.command, app.args, document.querySelector('[data-id="' + id + '"]'));
+            } else if (type === 'link') {
+                var link = currentConfig.webLinks.find(function(l) { return l.id === id; });
+                if (link) window.open(link.url, '_blank');
+            }
+        }
+
+        function hideContextMenu() {
+            document.getElementById('context-menu').style.display = 'none';
+        }
+
+        document.addEventListener('click', hideContextMenu);
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') hideContextMenu();
+        });
+
+        // --- Search Overlay (Ctrl+K) ---
+        var searchInput = document.getElementById('search-input');
+        var searchResults = document.getElementById('search-results');
+        var searchActiveIndex = -1;
+
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+K opens search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                document.getElementById('search-modal').showModal();
+                searchInput.value = '';
+                searchResults.innerHTML = '<div class="search-hint">Start typing to search…</div>';
+                searchActiveIndex = -1;
+                setTimeout(function() { searchInput.focus(); }, 50);
+                return;
+            }
+
+            // Digit shortcuts for workflows (only when no modal/input focused)
+            var active = document.activeElement;
+            var isInput = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
+            var isModal = document.querySelector('dialog[open]');
+            if (!isInput && !isModal && currentConfig && e.key >= '1' && e.key <= '9') {
+                var idx = parseInt(e.key) - 1;
+                if (currentConfig.workflows[idx]) {
+                    var wfId = currentConfig.workflows[idx].id;
+                    confirmLaunchWorkflow(wfId, document.querySelector('[data-id="' + wfId + '"]'));
+                }
+            }
+        });
+
+        searchInput.addEventListener('input', function() {
+            var q = searchInput.value.toLowerCase().trim();
+            if (!q) {
+                searchResults.innerHTML = '<div class="search-hint">Start typing to search…</div>';
+                searchActiveIndex = -1;
+                return;
+            }
+            var results = [];
+            if (currentConfig) {
+                currentConfig.localApps.forEach(function(a) {
+                    if (a.name.toLowerCase().includes(q)) results.push({ name: a.name, type: 'app', id: a.id, icon: a.iconBase64 ? '🖥️' : (a.icon || '📦'), cmd: a.command, args: a.args });
+                });
+                currentConfig.webLinks.forEach(function(l) {
+                    if (l.name.toLowerCase().includes(q)) results.push({ name: l.name, type: 'link', id: l.id, icon: l.icon || '🌐', url: l.url });
+                });
+                currentConfig.workflows.forEach(function(w) {
+                    if (w.name.toLowerCase().includes(q)) results.push({ name: w.name, type: 'workflow', id: w.id, icon: w.icon || '⚡', count: w.items.length });
+                });
+            }
+            if (results.length === 0) {
+                searchResults.innerHTML = '<div class="search-hint">No results found</div>';
+                searchActiveIndex = -1;
+                return;
+            }
+            searchResults.innerHTML = results.map(function(r, i) {
+                var extra = r.type === 'workflow' ? ' (' + r.count + ' items)' : '';
+                return '<div class="search-result' + (i === 0 ? ' active' : '') + '" data-idx="' + i + '" onclick="searchLaunch(' + i + ')">' +
+                    '<span class="emoji-icon">' + escapeHtml(r.icon) + '</span> ' + escapeHtml(r.name) + extra +
+                    '<span class="sr-type">' + r.type + '</span></div>';
+            }).join('');
+            searchActiveIndex = 0;
+            searchResults._data = results;
+        });
+
+        searchInput.addEventListener('keydown', function(e) {
+            var items = searchResults.querySelectorAll('.search-result');
+            if (items.length === 0) return;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                searchActiveIndex = Math.min(searchActiveIndex + 1, items.length - 1);
+                items.forEach(function(el, i) { el.classList.toggle('active', i === searchActiveIndex); });
+                items[searchActiveIndex].scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                searchActiveIndex = Math.max(searchActiveIndex - 1, 0);
+                items.forEach(function(el, i) { el.classList.toggle('active', i === searchActiveIndex); });
+                items[searchActiveIndex].scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                searchLaunch(searchActiveIndex);
+            }
+        });
+
+        function searchLaunch(idx) {
+            if (!searchResults._data || !searchResults._data[idx]) return;
+            var r = searchResults._data[idx];
+            closeModal('search-modal');
+            if (r.type === 'app') {
+                launchApp(r.cmd, r.args, document.querySelector('[data-id="' + r.id + '"]'));
+            } else if (r.type === 'link') {
+                window.open(r.url, '_blank');
+            } else if (r.type === 'workflow') {
+                confirmLaunchWorkflow(r.id, document.querySelector('[data-id="' + r.id + '"]'));
+            }
+        }
+
+        window.onload = async function() {
+            var ok = await checkLicense();
+            if (ok) loadDashboard();
+        };
+    </script>
+</body>
+</html>

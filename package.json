@@ -1,0 +1,32 @@
+{
+  "name": "smart-workspace",
+  "version": "1.0.7",
+  "description": "The Ultimate Portable Workspace",
+  "storeUrl": "https://klsdsl.lemonsqueezy.com/checkout/buy/d8db983d-15ca-4cea-97c9-adcfc91fa50e",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "npm version patch && electron-builder --win"
+  },
+  "author": "Your Name",
+  "license": "ISC",
+  "build": {
+    "appId": "com.smartworkspace.app",
+    "productName": "Smart Workspace",
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "allowElevation": true,
+      "runAfterFinish": true
+    }
+  },
+  "devDependencies": {
+    "electron": "^29.0.0",
+    "electron-builder": "^24.9.1"
+  }
+}
