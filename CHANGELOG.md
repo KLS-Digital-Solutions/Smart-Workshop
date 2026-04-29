@@ -1,4 +1,10 @@
 # Smart Workspace - Changelog
+## v1.0.39
+
+- Normalise CHANGELOG line endings
+- Refuse to start if config dir resolves to a machine-wide path (anti-leak guard)
+- Setup wizard now explains licence covers all Windows accounts on this PC
+
 ## v1.0.38
 
 - Update CHANGELOG for v1.0.37
