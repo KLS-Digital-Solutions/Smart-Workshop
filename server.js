@@ -14,6 +14,19 @@ const dataDir = process.env.SMART_DATA_DIR || process.env.PORTABLE_EXECUTABLE_DI
 fs.mkdirSync(dataDir, { recursive: true });
 const CONFIG_PATH = path.join(dataDir, 'config.json');
 
+// Safety guard: dataDir holds per-user config (apps, links, routines, PIN).
+// It must NEVER point at a machine-wide location like %PROGRAMDATA% \u2014 doing so
+// would leak one user's setup to every Windows account on the PC. Only the
+// license file is machine-wide (see resolveLicensePath below).
+if (process.platform === 'win32' && process.env.PROGRAMDATA) {
+    const programData = path.resolve(process.env.PROGRAMDATA).toLowerCase();
+    if (path.resolve(dataDir).toLowerCase().startsWith(programData)) {
+        // Cannot use log() here \u2014 it isn't defined yet. Use stderr.
+        console.error('[smart-workspace] FATAL: dataDir resolved to a machine-wide path. Refusing to start to prevent cross-user data leak.');
+        process.exit(1);
+    }
+}
+
 // --- App Version ---
 let appVersion = '1.0.0';
 let storeUrl = '';
@@ -818,6 +831,11 @@ function validateConfig(config) {
 }
 
 async function loadConfig() {
+    // PER-USER ONLY. CONFIG_PATH lives under dataDir (= %APPDATA%\Smart Workspace
+    // on Windows, via SMART_DATA_DIR env from main.js). Each Windows account has
+    // its own config so users never see each other's apps, links, routines, or
+    // Simple Mode PIN. Do NOT relocate this to %PROGRAMDATA%; only license.json
+    // is intentionally machine-wide. See v1.0.37 release notes.
     // Try main file, then .bak fallback. On corruption, archive the bad copy
     // to userData/crashes/ for forensics and recover from .bak when possible.
     const tryRead = async (p) => {
