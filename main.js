@@ -170,7 +170,10 @@ function createWindow() {
             if (!(global.smartKidsState && global.smartKidsState.enabled)) return;
             const cur = win.webContents.getURL() || '';
             if (cur.startsWith('http://127.0.0.1:3000')) return; // dashboard already has its own UI
-            const js = "(function(){try{var existing=document.getElementById('__kidsHomeBtn');if(existing)existing.remove();var b=document.createElement('a');b.id='__kidsHomeBtn';b.href='http://127.0.0.1:3000/?kids=1';b.textContent='\u{1F3E0} Home';b.setAttribute('style','position:fixed!important;top:12px!important;left:12px!important;z-index:2147483647!important;background:#2563eb!important;color:#fff!important;font:600 14px system-ui,Segoe UI,sans-serif!important;padding:10px 16px!important;border-radius:24px!important;box-shadow:0 4px 14px rgba(0,0,0,.35)!important;text-decoration:none!important;border:2px solid #fff!important;cursor:pointer!important;');(document.body||document.documentElement).appendChild(b);}catch(e){}})();";
+            // Use a button (not <a>) and force a top-frame location change, so page-level
+            // <base target="_blank"> or click hijacking can't route us through window.open
+            // (which the Kids Mode setWindowOpenHandler denies, producing a blank page).
+            const js = "(function(){try{var existing=document.getElementById('__kidsHomeBtn');if(existing)existing.remove();var b=document.createElement('button');b.id='__kidsHomeBtn';b.type='button';b.textContent='\u{1F3E0} Home';b.setAttribute('style','position:fixed!important;top:12px!important;left:12px!important;z-index:2147483647!important;background:#2563eb!important;color:#fff!important;font:600 14px system-ui,Segoe UI,sans-serif!important;padding:10px 16px!important;border-radius:24px!important;box-shadow:0 4px 14px rgba(0,0,0,.35)!important;border:2px solid #fff!important;cursor:pointer!important;');b.addEventListener('click',function(ev){ev.preventDefault();ev.stopPropagation();try{window.top.location.href='http://127.0.0.1:3000/?kids=1';}catch(e){window.location.href='http://127.0.0.1:3000/?kids=1';}},true);(document.body||document.documentElement).appendChild(b);}catch(e){}})();";
             win.webContents.executeJavaScript(js).catch(() => {});
         } catch {}
     }
