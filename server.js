@@ -410,6 +410,7 @@ function scanRegistry() {
 }
 
 async function scanSystemApps() {
+    if (process.platform === 'linux') return scanSystemAppsLinux();
     if (process.platform !== 'win32') return [];
 
     try {
@@ -461,9 +462,62 @@ async function scanSystemApps() {
     }
 }
 
+// Linux: enumerate .desktop entries from XDG application directories.
+// Spec: https://specifications.freedesktop.org/desktop-entry-spec/
+// We skip hidden / NoDisplay entries to mirror what desktop launchers actually show.
+async function scanSystemAppsLinux() {
+    try {
+        const dataDirs = (process.env.XDG_DATA_DIRS || '/usr/local/share:/usr/share').split(':');
+        const userDir = process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share');
+        const dirs = [
+            path.join(userDir, 'applications'),
+            ...dataDirs.map(d => path.join(d, 'applications')),
+            '/var/lib/snapd/desktop/applications',
+            '/var/lib/flatpak/exports/share/applications',
+            path.join(os.homedir(), '.local', 'share', 'flatpak', 'exports', 'share', 'applications')
+        ];
+        const seen = new Set();
+        const apps = [];
+        for (const dir of dirs) {
+            let files = [];
+            try { files = fs.readdirSync(dir).filter(f => f.endsWith('.desktop')); } catch { continue; }
+            for (const f of files) {
+                const full = path.join(dir, f);
+                if (seen.has(f)) continue;
+                seen.add(f);
+                try {
+                    const content = fs.readFileSync(full, 'utf8');
+                    // Only the [Desktop Entry] section.
+                    const main = content.split(/\n\[/)[0];
+                    const get = (key) => {
+                        const m = main.match(new RegExp('^' + key + '\\s*=\\s*(.+)$', 'm'));
+                        return m ? m[1].trim() : null;
+                    };
+                    const type = get('Type');
+                    if (type && type.toLowerCase() !== 'application') continue;
+                    const noDisplay = (get('NoDisplay') || '').toLowerCase() === 'true';
+                    const hidden = (get('Hidden') || '').toLowerCase() === 'true';
+                    if (noDisplay || hidden) continue;
+                    const name = get('Name');
+                    const execLine = get('Exec');
+                    if (!name || !execLine) continue;
+                    // Strip freedesktop field codes (%U %F %f %u %i %c %k) and trailing whitespace.
+                    const cleanedExec = execLine.replace(/%[fFuUdDnNickvm]/g, '').trim();
+                    apps.push({ name, path: cleanedExec });
+                } catch {}
+            }
+        }
+        apps.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+        log('info', `Linux app scan: found ${apps.length} apps`);
+        return apps;
+    } catch (err) {
+        log('error', `Linux app scan error: ${err.message}`);
+        return [];
+    }
+}
+
 // PowerShell fallback — COM object created once, forced array output
-function scanSystemAppsPowerShell() {
-    return new Promise((resolve) => {
+function scanSystemAppsPowerShell() {    return new Promise((resolve) => {
         const psScript = `
             $ErrorActionPreference = 'SilentlyContinue';
             $paths = @(
@@ -743,6 +797,15 @@ function launchApplication(appPath, args) {
                 log(error ? 'error' : 'info', `Launch app: ${cleaned}${argStr} — ${error ? 'FAIL' : 'OK'}`);
                 resolve(!error);
             });
+        } else if (process.platform === 'linux') {
+            // .desktop Exec values can be full command lines (e.g. "firefox %u").
+            // Use the shell so multi-token Exec strings work; field codes were
+            // stripped at scan time by scanSystemAppsLinux().
+            const cmd = args ? `${cleaned} ${args}` : cleaned;
+            exec(cmd, { detached: true }, (error) => {
+                log(error ? 'error' : 'info', `Launch app: ${cmd} — ${error ? 'FAIL' : 'OK'}`);
+                resolve(!error);
+            });
         } else {
             const argList = args ? args.split(/\s+/) : [];
             execFile(cleaned, argList, (error) => {
@@ -763,7 +826,9 @@ function launchUrl(url) {
                 resolve(!error);
             });
         } else {
-            execFile('open', [safeUrl], (error) => {
+            // xdg-open is the freedesktop standard on Linux; macOS uses 'open'.
+            const opener = process.platform === 'darwin' ? 'open' : 'xdg-open';
+            execFile(opener, [safeUrl], (error) => {
                 log(error ? 'error' : 'info', `Launch URL: ${safeUrl} — ${error ? 'FAIL' : 'OK'}`);
                 resolve(!error);
             });
@@ -774,8 +839,16 @@ function launchUrl(url) {
 // --- Startup Setting ---
 
 async function applyStartupSetting(enable) {
-    if (process.platform !== 'win32') return;
+    if (process.platform === 'win32') {
+        return applyStartupSettingWindows(enable);
+    }
+    if (process.platform === 'linux') {
+        return applyStartupSettingLinux(enable);
+    }
+    // macOS and others: not yet implemented; treat as no-op.
+}
 
+async function applyStartupSettingWindows(enable) {
     const startupFolder = path.join(
         os.homedir(), 'AppData', 'Roaming', 'Microsoft', 'Windows',
         'Start Menu', 'Programs', 'Startup'
@@ -799,6 +872,37 @@ async function applyStartupSetting(enable) {
     } else {
         try { if (fs.existsSync(shortcutPath)) fs.unlinkSync(shortcutPath); }
         catch (err) { log('error', `applyStartupSetting unlink failed: ${err.message}`); }
+    }
+}
+
+// Linux desktop autostart spec: https://specifications.freedesktop.org/autostart-spec/
+// Drop a smart-workspace.desktop file in ~/.config/autostart that points at the
+// running executable. APPIMAGE env is set when launched from an AppImage and is
+// preferred so the autostart entry survives AppImage moves between versions.
+async function applyStartupSettingLinux(enable) {
+    const autostartDir = path.join(os.homedir(), '.config', 'autostart');
+    const desktopPath = path.join(autostartDir, 'smart-workspace.desktop');
+    if (enable) {
+        try {
+            fs.mkdirSync(autostartDir, { recursive: true });
+            const exec = process.env.APPIMAGE || process.execPath;
+            const contents = [
+                '[Desktop Entry]',
+                'Type=Application',
+                'Name=Smart Workspace',
+                'Comment=The Ultimate Portable Workspace',
+                `Exec=${exec}`,
+                'Terminal=false',
+                'X-GNOME-Autostart-enabled=true',
+                ''
+            ].join('\n');
+            fs.writeFileSync(desktopPath, contents, { mode: 0o644 });
+        } catch (err) {
+            log('error', `applyStartupSetting (linux) failed: ${err.message}`);
+        }
+    } else {
+        try { if (fs.existsSync(desktopPath)) fs.unlinkSync(desktopPath); }
+        catch (err) { log('error', `applyStartupSetting (linux) unlink failed: ${err.message}`); }
     }
 }
 

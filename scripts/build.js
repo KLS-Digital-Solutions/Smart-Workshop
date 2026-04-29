@@ -74,7 +74,15 @@ function restore() {
 }
 
 function runBuilder(publish) {
-    const args = ['electron-builder', '--win', '--publish', publish ? 'always' : 'never'];
+    // Default: build for the host OS only. Pass --linux to also build the
+    // Linux AppImage (cross-builds from Windows). Pass --all for both.
+    const wantLinux = process.argv.includes('--linux') || process.argv.includes('--all');
+    const wantWin = !process.argv.includes('--linux') || process.argv.includes('--all');
+    const targets = [];
+    if (wantWin) targets.push('--win');
+    if (wantLinux) targets.push('--linux');
+    if (targets.length === 0) targets.push('--win');
+    const args = ['electron-builder', ...targets, '--publish', publish ? 'always' : 'never'];
     console.log(`[build] npx ${args.join(' ')}`);
     const result = spawnSync('npx', args, { cwd: ROOT, stdio: 'inherit', shell: true });
     return result.status === 0;

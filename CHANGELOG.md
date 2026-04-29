@@ -1,4 +1,12 @@
 # Smart Workspace - Changelog
+## v1.0.43
+
+### Fixed
+- Kids home button uses button+click handler to bypass page popup hijacking
+
+### Changed
+- Tweak CHANGELOG v1.0.42 entry
+
 ## v1.0.42
 
 ### Fixed
