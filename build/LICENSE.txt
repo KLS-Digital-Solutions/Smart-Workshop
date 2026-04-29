@@ -13,8 +13,11 @@ THE SOFTWARE.
    purchased from KLS Digital Solutions Limited or an authorised
    reseller (e.g. Lemon Squeezy), KLS Digital Solutions Limited
    grants you a non-exclusive, non-transferable licence to install
-   and use the Software on up to three (3) devices that you own or
-   control, for your personal or internal business use.
+   and use the Software on up to three (3) physical computers
+   (devices) that you own or control, for your personal or internal
+   business use. All Windows user accounts on a licensed device are
+   covered by a single activation; the three-device limit applies to
+   distinct physical computers, not user profiles.
 
 2. TRIAL PERIOD
    The Software may be evaluated free of charge for fourteen (14)
