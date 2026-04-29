@@ -15,8 +15,31 @@ const FILTER_PATTERNS = [
     /^bump version\b/i,
     /^release v\d/i,
     /^\d+\.\d+\.\d+$/, // npm version commits ("1.0.31")
-    /^v\d+\.\d+\.\d+$/
+    /^v\d+\.\d+\.\d+$/,
+    // Pure CHANGELOG / line-ending housekeeping commits
+    /^update changelog\b/i,
+    /^changelog:/i,
+    /^normalise.*line endings/i,
+    /^normalize.*line endings/i,
+    /^record .* changelog placeholder/i
 ];
+
+// Decide which heading a commit subject belongs under.
+// Order matters: more specific patterns first.
+function categorise(subject) {
+    const s = subject.trim();
+    // Conventional-commit prefixes win.
+    if (/^feat(\(|:|!)/i.test(s)) return { heading: 'Added', text: s.replace(/^feat(\([^)]*\))?!?:\s*/i, '') };
+    if (/^fix(\(|:|!)/i.test(s))  return { heading: 'Fixed', text: s.replace(/^fix(\([^)]*\))?!?:\s*/i, '') };
+    if (/^(perf|refactor|chore|docs|style|build|ci|test)(\(|:|!)/i.test(s)) {
+        return { heading: 'Changed', text: s.replace(/^[a-z]+(\([^)]*\))?!?:\s*/i, '') };
+    }
+    // Plain-English heuristics.
+    if (/^(add(ed)?|new|introduce)\b/i.test(s))      return { heading: 'Added',   text: s };
+    if (/^(fix(ed|es)?|resolve(d|s)?|patch(ed)?|prevent)\b/i.test(s)) return { heading: 'Fixed', text: s };
+    if (/^(remove(d)?|delete(d)?|drop(ped)?)\b/i.test(s)) return { heading: 'Removed', text: s };
+    return { heading: 'Changed', text: s };
+}
 
 function git(args, cwd) {
     const r = spawnSync('git', args, { cwd, encoding: 'utf8' });
@@ -56,11 +79,27 @@ function todayISO() {
 function buildSection(version, commits) {
     const lines = [`## v${version}`, ''];
     if (commits.length === 0) {
-        lines.push('- Maintenance release.');
-    } else {
-        for (const c of commits) lines.push(`- ${c}`);
+        lines.push('### Changed');
+        lines.push('- Maintenance release. No user-facing changes.');
+        lines.push('');
+        return lines.join('\n');
     }
-    lines.push('');
+    // Group by heading, preserving insertion order within a group.
+    const order = ['Added', 'Fixed', 'Changed', 'Removed'];
+    const groups = Object.create(null);
+    for (const c of commits) {
+        const { heading, text } = categorise(c);
+        if (!groups[heading]) groups[heading] = [];
+        // Capitalise first letter for prose-style bullets.
+        const bullet = text.charAt(0).toUpperCase() + text.slice(1);
+        groups[heading].push(bullet);
+    }
+    for (const h of order) {
+        if (!groups[h]) continue;
+        lines.push(`### ${h}`);
+        for (const b of groups[h]) lines.push(`- ${b}`);
+        lines.push('');
+    }
     return lines.join('\n');
 }
 

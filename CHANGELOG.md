@@ -1,24 +1,40 @@
 # Smart Workspace - Changelog
+## v1.0.40
+
+### Changed
+- Internal release plumbing and CHANGELOG housekeeping; no user-facing changes since v1.0.39.
+
 ## v1.0.39
 
-- Normalise CHANGELOG line endings
-- Refuse to start if config dir resolves to a machine-wide path (anti-leak guard)
-- Setup wizard now explains licence covers all Windows accounts on this PC
+### Added
+- Setup Wizard now explains that one licence covers every Windows account on the same PC, and that each account keeps its own private apps, links, and routines.
+- Plain-English summary at the top of the Settings → Legal & Licence dialog explaining how the 3-PC / multi-account licence works.
+- Activation success toast now confirms “All Windows users on this PC are now covered.”
+- Trial-expired dialog now mentions that activating covers other Windows accounts on the PC.
+
+### Fixed
+- Hardened anti-leak guard: the app refuses to start if its per-user data directory ever resolves to a machine-wide path (e.g. %PROGRAMDATA%), preventing accidental cross-user data exposure in future updates.
 
 ## v1.0.38
 
-- Update CHANGELOG for v1.0.37
+### Changed
+- Maintenance release. No user-facing changes since v1.0.37.
 
 ## v1.0.37
 
-- Record v1.0.36 changelog placeholder and normalise line endings
-- EULA: clarify three-device limit applies to physical computers, not user profiles
-- Installer creates machine-wide licence folder in ProgramData with shared ACLs
-- Licence now covers all Windows accounts on the same PC (one activation per device)
+### Changed
+- Licence now covers every Windows user account on the same PC. The 3-device limit applies to physical computers, not user profiles — share the household PC freely without burning extra activations.
+- Licence file relocated to a machine-wide folder (`%PROGRAMDATA%\Smart Workspace`) so all Windows accounts share a single activation. Existing per-user licence files are migrated automatically on first launch.
+- Per-machine fingerprint upgraded to use the Windows MachineGuid (with hostname fallback) for stable activations across PC renames.
+- Installer now creates the shared licence folder during install with appropriate read/write permissions for all Windows users.
+
+### Fixed
+- EULA Section 1 now states explicitly that the three-device limit applies to physical computers, with all Windows user accounts on a licensed device covered by a single activation.
 
 ## v1.0.36
 
-- Maintenance release.
+### Changed
+- Maintenance release. Internal packaging and release-pipeline tweaks; no user-facing changes since v1.0.35.
 
 ## v1.0.35
 
