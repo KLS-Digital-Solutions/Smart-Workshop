@@ -1,4 +1,8 @@
 # Smart Workspace - Changelog
+## v1.0.38
+
+- Update CHANGELOG for v1.0.37
+
 ## v1.0.37
 
 - Record v1.0.36 changelog placeholder and normalise line endings
