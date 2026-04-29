@@ -1,4 +1,12 @@
 # Smart Workspace - Changelog
+## v1.0.41
+
+### Added
+- Add Kids Mode with parent PIN and approved-site allowlist
+
+### Changed
+- Improve CHANGELOG format
+
 ## v1.0.40
 
 ### Changed
