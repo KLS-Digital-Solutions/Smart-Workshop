@@ -161,6 +161,22 @@ function createWindow() {
         if (input.control && (k === 'u' || k === 's' || k === 'p')) return event.preventDefault();
     });
 
+    // When Kids Mode is on, inject a floating "🏠 Home" button onto every external
+    // page so the child always has a visible way back to the dashboard — even in
+    // fullscreen where the menu bar is hidden. The button is a plain anchor to the
+    // app's own URL, which the will-navigate guard already allows.
+    function injectKidsHomeButton() {
+        try {
+            if (!(global.smartKidsState && global.smartKidsState.enabled)) return;
+            const cur = win.webContents.getURL() || '';
+            if (cur.startsWith('http://127.0.0.1:3000')) return; // dashboard already has its own UI
+            const js = "(function(){try{var existing=document.getElementById('__kidsHomeBtn');if(existing)existing.remove();var b=document.createElement('a');b.id='__kidsHomeBtn';b.href='http://127.0.0.1:3000/?kids=1';b.textContent='\u{1F3E0} Home';b.setAttribute('style','position:fixed!important;top:12px!important;left:12px!important;z-index:2147483647!important;background:#2563eb!important;color:#fff!important;font:600 14px system-ui,Segoe UI,sans-serif!important;padding:10px 16px!important;border-radius:24px!important;box-shadow:0 4px 14px rgba(0,0,0,.35)!important;text-decoration:none!important;border:2px solid #fff!important;cursor:pointer!important;');(document.body||document.documentElement).appendChild(b);}catch(e){}})();";
+            win.webContents.executeJavaScript(js).catch(() => {});
+        } catch {}
+    }
+    win.webContents.on('did-finish-load', injectKidsHomeButton);
+    win.webContents.on('did-frame-finish-load', (_e, isMainFrame) => { if (isMainFrame) injectKidsHomeButton(); });
+
     // Wait for the server to be listening before loading the UI.
     // If the server fails to start, surface a dialog and exit cleanly
     // instead of leaving the splash hanging.
