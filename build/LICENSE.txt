@@ -1,0 +1,67 @@
+SMART WORKSPACE - END USER LICENSE AGREEMENT
+
+Copyright (c) 2026 KLS DIGITAL SOLUTIONS LIMITED. All rights reserved.
+
+PLEASE READ THIS END USER LICENSE AGREEMENT ("AGREEMENT") CAREFULLY
+BEFORE INSTALLING OR USING SMART WORKSPACE ("SOFTWARE"). BY INSTALLING,
+COPYING, OR OTHERWISE USING THE SOFTWARE, YOU AGREE TO BE BOUND BY THE
+TERMS OF THIS AGREEMENT. IF YOU DO NOT AGREE, DO NOT INSTALL OR USE
+THE SOFTWARE.
+
+1. LICENSE GRANT
+   Subject to the terms of this Agreement and a valid license key
+   purchased from KLS Digital Solutions Limited or an authorised
+   reseller (e.g. Lemon Squeezy), KLS Digital Solutions Limited
+   grants you a non-exclusive, non-transferable licence to install
+   and use the Software on up to three (3) devices that you own or
+   control, for your personal or internal business use.
+
+2. TRIAL PERIOD
+   The Software may be evaluated free of charge for fourteen (14)
+   days. After the trial expires, a valid license key is required to
+   continue using core features.
+
+3. RESTRICTIONS
+   You may not: (a) modify, reverse engineer, decompile, or
+   disassemble the Software except as permitted by applicable law;
+   (b) rent, lease, lend, sell, redistribute, or sublicense the
+   Software; (c) remove or alter any proprietary notices; or
+   (d) use the Software in any unlawful manner.
+
+4. PRIVACY
+   The Software does not collect telemetry or personal data. License
+   validation requests are sent to Lemon Squeezy for the sole purpose
+   of verifying your license key and are subject to Lemon Squeezy's
+   privacy policy at https://www.lemonsqueezy.com/privacy.
+
+5. UPDATES
+   The Software may automatically check for and download updates
+   from the official GitHub release feed. You may disable automatic
+   update checks in Settings.
+
+6. DISCLAIMER OF WARRANTIES
+   THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+   OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND
+   NONINFRINGEMENT.
+
+7. LIMITATION OF LIABILITY
+   IN NO EVENT SHALL KLS DIGITAL SOLUTIONS LIMITED BE LIABLE FOR ANY
+   CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM OR IN CONNECTION
+   WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+8. REFUNDS
+   Refund requests are governed by Lemon Squeezy's refund policy.
+
+9. TERMINATION
+   This licence terminates automatically if you breach any of its
+   terms. Upon termination you must uninstall and destroy all copies
+   of the Software.
+
+10. GOVERNING LAW
+    This Agreement is governed by the laws of the jurisdiction in
+    which KLS Digital Solutions Limited is registered, without regard
+    to its conflict of laws principles.
+
+For questions, contact KLS Digital Solutions Limited via the support
+channels listed on the product website.

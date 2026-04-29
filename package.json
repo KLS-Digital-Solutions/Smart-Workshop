@@ -1,0 +1,68 @@
+{
+  "name": "smart-workspace",
+  "version": "1.0.35",
+  "description": "The Ultimate Portable Workspace",
+  "storeUrl": "https://klsdsl.lemonsqueezy.com/checkout/buy/801f87e9-8d9e-42bc-9b97-d4db1453e5ad",
+  "main": "main.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KLS-Digital-Solutions/Smart-Workshop.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "build": "node scripts/build.js",
+    "release": "git diff --quiet && git diff --cached --quiet && npm version patch && node scripts/build.js --publish"
+  },
+  "author": "KLS DIGITAL SOLUTIONS LIMITED",
+  "license": "ISC",
+  "build": {
+    "appId": "com.klsdigitalsolutions.smartworkspace",
+    "productName": "Smart Workspace",
+    "artifactName": "Smart Workspace Setup.${ext}",
+    "extraResources": [
+      {
+        "from": "build/logo.png",
+        "to": "logo.png"
+      },
+      {
+        "from": "CHANGELOG.md",
+        "to": "CHANGELOG.md"
+      },
+      {
+        "from": "build/LICENSE.txt",
+        "to": "LICENSE.txt"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "allowElevation": true,
+      "runAfterFinish": true,
+      "license": "build/LICENSE.txt",
+      "installerSidebar": "build/installerSidebar.bmp",
+      "installerHeader": "build/installerHeader.bmp",
+      "include": "build/installer.nsh"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "KLS-Digital-Solutions",
+        "repo": "Smart-Workshop",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "devDependencies": {
+    "electron": "^29.0.0",
+    "electron-builder": "^24.9.1",
+    "javascript-obfuscator": "^5.4.1"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.3"
+  }
+}
