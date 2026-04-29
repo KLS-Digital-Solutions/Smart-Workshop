@@ -1,4 +1,11 @@
 # Smart Workspace - Changelog
+## v1.0.37
+
+- Record v1.0.36 changelog placeholder and normalise line endings
+- EULA: clarify three-device limit applies to physical computers, not user profiles
+- Installer creates machine-wide licence folder in ProgramData with shared ACLs
+- Licence now covers all Windows accounts on the same PC (one activation per device)
+
 ## v1.0.36
 
 - Maintenance release.
