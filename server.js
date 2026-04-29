@@ -64,7 +64,43 @@ function log(level, message) {
 }
 
 // --- Licensing (Lemon Squeezy) ---
-const LICENSE_PATH = path.join(dataDir, 'license.json');
+// License is stored machine-wide so that all Windows user accounts on the
+// same PC share a single activation slot. Falls back to the per-user data
+// dir if the machine-wide location isn't writable (locked-down enterprise PCs,
+// portable mode, non-Windows).
+function resolveLicensePath() {
+    const candidates = [];
+    if (process.platform === 'win32' && process.env.PROGRAMDATA) {
+        candidates.push(path.join(process.env.PROGRAMDATA, 'Smart Workspace'));
+    } else if (process.platform !== 'win32') {
+        candidates.push('/var/lib/smart-workspace');
+    }
+    candidates.push(dataDir); // per-user fallback
+    for (const dir of candidates) {
+        try {
+            fs.mkdirSync(dir, { recursive: true });
+            const probe = path.join(dir, '.write-probe');
+            fs.writeFileSync(probe, '');
+            fs.unlinkSync(probe);
+            return path.join(dir, 'license.json');
+        } catch {}
+    }
+    return path.join(dataDir, 'license.json');
+}
+const LICENSE_PATH = resolveLicensePath();
+// One-time migration: if we're now using the machine-wide path but a legacy
+// per-user license.json exists, promote it. The first Windows account to
+// upgrade donates its activation slot to all other accounts on this PC.
+try {
+    const legacyPath = path.join(dataDir, 'license.json');
+    if (LICENSE_PATH !== legacyPath && fs.existsSync(legacyPath) && !fs.existsSync(LICENSE_PATH)) {
+        fs.copyFileSync(legacyPath, LICENSE_PATH);
+        try { fs.unlinkSync(legacyPath); } catch {}
+        log('info', `Migrated license to machine-wide path: ${LICENSE_PATH}`);
+    }
+} catch (e) {
+    // Non-fatal; loadLicense will still work against whichever path resolved.
+}
 const TRIAL_DAYS = 14;
 const OFFLINE_GRACE_DAYS = 7;
 // Only re-validate against Lemon Squeezy at most once per this interval
@@ -101,9 +137,32 @@ function saveLicense(lic) {
     fs.writeFileSync(LICENSE_PATH, JSON.stringify(lic, null, 2));
 }
 
+// Returns a stable per-machine identifier used as the human-readable label
+// for the activation in Lemon Squeezy. On Windows we prefer the OS MachineGuid
+// (survives renames). Hostname is the cross-platform fallback.
+let _cachedInstanceName = null;
 function getInstanceName() {
-    try { return `${os.hostname()}-${os.userInfo().username}`; }
-    catch { return os.hostname(); }
+    if (_cachedInstanceName) return _cachedInstanceName;
+    let label = null;
+    try {
+        if (process.platform === 'win32') {
+            const out = require('child_process').execSync(
+                'reg query "HKLM\\SOFTWARE\\Microsoft\\Cryptography" /v MachineGuid',
+                { encoding: 'utf8', timeout: 3000, windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'] }
+            );
+            const m = out.match(/MachineGuid\s+REG_SZ\s+([0-9a-fA-F-]+)/);
+            if (m) label = `${os.hostname()}-${m[1].slice(0, 8)}`;
+        } else if (fs.existsSync('/etc/machine-id')) {
+            const id = fs.readFileSync('/etc/machine-id', 'utf8').trim();
+            if (id) label = `${os.hostname()}-${id.slice(0, 8)}`;
+        }
+    } catch {}
+    if (!label) {
+        try { label = os.hostname(); }
+        catch { label = 'smart-workspace-device'; }
+    }
+    _cachedInstanceName = label;
+    return label;
 }
 
 function maskKey(key) {
