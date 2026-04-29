@@ -464,7 +464,7 @@
     <dialog id="license-gate">
         <div style="font-size:3rem; margin-bottom:0.5rem;">🔒</div>
         <h2 style="margin:0 0 0.5rem; font-size:1.4rem;">Trial Expired</h2>
-        <p style="color:var(--text-muted); font-size:0.9rem; margin:0 0 1.5rem;">Your 14-day free trial has ended. Enter a license key to continue.</p>
+        <p style="color:var(--text-muted); font-size:0.9rem; margin:0 0 1.5rem;">Your 14-day free trial has ended. Enter a license key to continue. Activating here will also cover any other Windows accounts on this PC.</p>
         <div class="form-group" style="text-align:left;">
             <label>License Key</label>
             <input type="text" id="gate-license-key" placeholder="Paste your license key here">
@@ -513,6 +513,10 @@
                 <h2 style="margin:0 0 0.5rem;">Welcome to Smart Workspace</h2>
                 <p style="color:var(--text-muted); margin: 0 0 0.5rem;">Your apps, websites, and routines — all in one click.</p>
                 <p style="color:var(--text-muted); font-size:0.85rem;">We'll set things up in just a minute.</p>
+                <div style="margin-top:1rem; padding:0.75rem 1rem; background:var(--bg-elev); border:1px solid var(--border); border-radius:10px; text-align:left; font-size:0.85rem; color:var(--text-muted);">
+                    <strong style="color:var(--text-main);">👪 One licence covers the whole PC.</strong><br>
+                    Other Windows accounts on this computer (partner, kids, guest) can launch Smart Workspace too — each with their own private apps, links, and routines.
+                </div>
             </div>
         </div>
 
@@ -573,6 +577,10 @@
                 <div style="font-size:3rem;">✨</div>
                 <h2 style="margin:0 0 0.5rem;">You're all set</h2>
                 <p style="color:var(--text-muted);">You can revisit these settings any time.</p>
+                <div style="margin-top:1rem; padding:0.75rem 1rem; background:var(--bg-elev); border:1px solid var(--border); border-radius:10px; text-align:left; font-size:0.85rem; color:var(--text-muted);">
+                    <strong style="color:var(--text-main);">Sharing this PC?</strong><br>
+                    Other people who sign in to Windows here can launch Smart Workspace too. Their setup stays private — they won't see yours, and you won't see theirs.
+                </div>
             </div>
         </div>
 
@@ -588,6 +596,9 @@
     <!-- Legal / EULA -->
     <dialog id="legal-modal" style="max-width:680px; width:92%;">
         <h2 style="margin:0 0 0.75rem;">Legal &amp; Licence</h2>
+        <div style="padding:0.75rem 1rem; background:var(--bg-elev); border:1px solid var(--border); border-radius:10px; font-size:0.85rem; color:var(--text-muted); margin-bottom:0.75rem;">
+            <strong style="color:var(--text-main);">In plain English:</strong> your licence works on up to 3 PCs. On each PC, every Windows user account is covered automatically — no extra activations needed. Each account keeps its own apps, links, and routines private.
+        </div>
         <pre id="legal-text" style="max-height: 60vh; overflow:auto; white-space: pre-wrap; word-wrap: break-word; font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-size: 0.85rem; line-height: 1.5; padding: 0.9rem; border:1px solid var(--border); border-radius: 8px; background: var(--bg-elev);">Loading…</pre>
         <p style="font-size:0.8rem; color:var(--text-muted); margin: 0.75rem 0 0;">Privacy: this app does not collect telemetry or personal data. License validation is handled by Lemon Squeezy.</p>
         <div style="display:flex; justify-content:flex-end; margin-top: 1rem;"><button class="btn-primary" onclick="closeModal('legal-modal')">Close</button></div>
@@ -1035,7 +1046,7 @@
                 var data = await res.json();
                 if (data.success) {
                     document.getElementById('license-gate').close();
-                    showToast('License activated!', 'success');
+                    showToast('Activated! All Windows users on this PC are now covered.', 'success');
                     await checkLicense();
                     loadDashboard();
                 } else {
@@ -1059,7 +1070,7 @@
                 });
                 var data = await res.json();
                 if (data.success) {
-                    showToast('License activated!', 'success');
+                    showToast('Activated! All Windows users on this PC are now covered.', 'success');
                     document.getElementById('settings-license-key').value = '';
                     await checkLicense();
                 } else {
