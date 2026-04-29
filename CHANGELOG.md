@@ -1,4 +1,8 @@
 # Smart Workspace - Changelog
+## v1.0.36
+
+- Maintenance release.
+
 ## v1.0.35
 
 - Internal maintenance and packaging tweaks.
