@@ -804,7 +804,7 @@ async function applyStartupSetting(enable) {
 
 // --- Config Management ---
 
-const DEFAULT_SETTINGS = { startup: false, onboarded: false, fullscreenOnStart: false, simpleMode: false, simplePinHash: '' };
+const DEFAULT_SETTINGS = { startup: false, onboarded: false, fullscreenOnStart: false, simpleMode: false, simplePinHash: '', kidsMode: false, kidsPinHash: '', kidsSites: [] };
 const DEFAULT_CONFIG = { localApps: [], webLinks: [], workflows: [], categories: ['General'], settings: { ...DEFAULT_SETTINGS } };
 
 function sha256(input) {
@@ -827,6 +827,14 @@ function validateConfig(config) {
     if (typeof config.settings.fullscreenOnStart !== 'boolean') config.settings.fullscreenOnStart = false;
     if (typeof config.settings.simpleMode !== 'boolean') config.settings.simpleMode = false;
     if (typeof config.settings.simplePinHash !== 'string') config.settings.simplePinHash = '';
+    if (typeof config.settings.kidsMode !== 'boolean') config.settings.kidsMode = false;
+    if (typeof config.settings.kidsPinHash !== 'string') config.settings.kidsPinHash = '';
+    if (!Array.isArray(config.settings.kidsSites)) config.settings.kidsSites = [];
+    // Sanitise kids sites: each must have id, name, url. Drop bad entries.
+    config.settings.kidsSites = config.settings.kidsSites.filter(s => s && typeof s === 'object'
+        && typeof s.id === 'string' && s.id
+        && typeof s.name === 'string' && s.name
+        && typeof s.url === 'string' && /^https?:\/\//i.test(s.url));
     return config;
 }
 
@@ -930,9 +938,10 @@ async function handleGetConfig(req, res) {
 
 async function handleGetSettings(req, res) {
     const config = await loadConfig();
-    // Never expose the PIN hash to the renderer; surface presence as a boolean.
-    const { simplePinHash, ...safe } = config.settings;
+    // Never expose PIN hashes to the renderer; surface presence as booleans.
+    const { simplePinHash, kidsPinHash, ...safe } = config.settings;
     safe.simplePinSet = !!simplePinHash;
+    safe.kidsPinSet = !!kidsPinHash;
     sendJSON(res, safe);
 }
 
@@ -940,7 +949,7 @@ async function handlePostSettings(req, res) {
     const body = await parseBody(req);
     const config = await loadConfig();
     // Strip protected fields; they have dedicated endpoints.
-    const { simplePinHash, simpleMode, ...safeBody } = body || {};
+    const { simplePinHash, simpleMode, kidsPinHash, kidsMode, kidsSites, ...safeBody } = body || {};
     config.settings = { ...config.settings, ...safeBody };
     if (safeBody.startup !== undefined) await applyStartupSetting(!!safeBody.startup);
     await saveConfig(config);
@@ -985,6 +994,116 @@ async function handleVerifySimplePin(req, res) {
     if (!currentHash) return sendJSON(res, { ok: true });
     const pin = typeof body.pin === 'string' ? body.pin.trim() : '';
     sendJSON(res, { ok: sha256(pin) === currentHash });
+}
+
+// --- Kids Mode ---
+// Returns the canonical hostname for an http/https URL, lowercased.
+function urlHost(u) {
+    try { return new URL(u).hostname.toLowerCase(); } catch { return null; }
+}
+
+// Update the global state main.js reads to enforce navigation rules.
+function publishKidsState(config) {
+    const enabled = !!config.settings.kidsMode;
+    const sites = Array.isArray(config.settings.kidsSites) ? config.settings.kidsSites : [];
+    const hosts = new Set();
+    for (const s of sites) {
+        const h = urlHost(s.url);
+        if (h) hosts.add(h);
+    }
+    global.smartKidsState = { enabled, hosts, sites };
+    try { if (typeof global.smartKidsApply === 'function') global.smartKidsApply(); } catch {}
+}
+
+function requireKidsPin(config, pin) {
+    const hash = config.settings.kidsPinHash || '';
+    if (!hash) return true; // no PIN set yet
+    return sha256(String(pin || '').trim()) === hash;
+}
+
+async function handleGetKidsMode(req, res) {
+    const config = await loadConfig();
+    sendJSON(res, {
+        enabled: !!config.settings.kidsMode,
+        hasPin: !!config.settings.kidsPinHash,
+        sites: config.settings.kidsSites || []
+    });
+}
+
+async function handleKidsToggle(req, res) {
+    const body = await parseBody(req);
+    const config = await loadConfig();
+    const enabled = !!body.enabled;
+    const pin = typeof body.pin === 'string' ? body.pin.trim() : '';
+    // Disabling requires the PIN if one is set. Enabling requires a PIN to exist.
+    if (!enabled) {
+        if (!requireKidsPin(config, pin)) return sendError(res, 403, 'Incorrect Parent PIN');
+    } else {
+        if (!config.settings.kidsPinHash) return sendError(res, 400, 'Set a Parent PIN before enabling Kids Mode');
+    }
+    config.settings.kidsMode = enabled;
+    await saveConfig(config);
+    publishKidsState(config);
+    sendJSON(res, { success: true, enabled });
+}
+
+async function handleKidsSetPin(req, res) {
+    const body = await parseBody(req);
+    const config = await loadConfig();
+    const currentHash = config.settings.kidsPinHash || '';
+    const pin = typeof body.pin === 'string' ? body.pin.trim() : '';
+    const newPin = typeof body.newPin === 'string' ? body.newPin.trim() : '';
+    if (currentHash && sha256(pin) !== currentHash) return sendError(res, 403, 'Incorrect Parent PIN');
+    if (!newPin) {
+        // Clearing PIN. Refuse if Kids Mode currently enabled (lock-out risk).
+        if (config.settings.kidsMode) return sendError(res, 400, 'Disable Kids Mode before clearing the Parent PIN');
+        config.settings.kidsPinHash = '';
+    } else {
+        if (!/^\d{4,8}$/.test(newPin)) return sendError(res, 400, 'PIN must be 4–8 digits');
+        config.settings.kidsPinHash = sha256(newPin);
+    }
+    await saveConfig(config);
+    sendJSON(res, { success: true, hasPin: !!config.settings.kidsPinHash });
+}
+
+async function handleKidsVerifyPin(req, res) {
+    const body = await parseBody(req);
+    const config = await loadConfig();
+    const currentHash = config.settings.kidsPinHash || '';
+    if (!currentHash) return sendJSON(res, { ok: true });
+    const pin = typeof body.pin === 'string' ? body.pin.trim() : '';
+    sendJSON(res, { ok: sha256(pin) === currentHash });
+}
+
+async function handleKidsUpsertSite(req, res) {
+    const body = await parseBody(req);
+    const config = await loadConfig();
+    if (!requireKidsPin(config, body.pin)) return sendError(res, 403, 'Incorrect Parent PIN');
+    const name = typeof body.name === 'string' ? body.name.trim() : '';
+    let url = typeof body.url === 'string' ? body.url.trim() : '';
+    if (!name || !url) return sendError(res, 400, 'Name and URL are required');
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    if (!urlHost(url)) return sendError(res, 400, 'Invalid URL');
+    const icon = typeof body.icon === 'string' ? body.icon.slice(0, 8) : '🌈';
+    const id = typeof body.id === 'string' && body.id ? body.id : ('kids-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8));
+    const sites = config.settings.kidsSites;
+    const existing = sites.findIndex(s => s.id === id);
+    const entry = { id, name, url, icon };
+    if (existing >= 0) sites[existing] = entry; else sites.push(entry);
+    await saveConfig(config);
+    publishKidsState(config);
+    sendJSON(res, { success: true, site: entry });
+}
+
+async function handleKidsDeleteSite(req, res) {
+    const body = await parseBody(req);
+    const config = await loadConfig();
+    if (!requireKidsPin(config, body.pin)) return sendError(res, 403, 'Incorrect Parent PIN');
+    const id = typeof body.id === 'string' ? body.id : '';
+    config.settings.kidsSites = (config.settings.kidsSites || []).filter(s => s.id !== id);
+    await saveConfig(config);
+    publishKidsState(config);
+    sendJSON(res, { success: true });
 }
 
 async function handleGetStats(req, res) {
@@ -1467,6 +1586,12 @@ const routes = {
     'POST /api/settings': handlePostSettings,
     'POST /api/simple-mode': handleSimpleMode,
     'POST /api/simple-pin/verify': handleVerifySimplePin,
+    'GET /api/kids-mode': handleGetKidsMode,
+    'POST /api/kids-mode/toggle': handleKidsToggle,
+    'POST /api/kids-mode/set-pin': handleKidsSetPin,
+    'POST /api/kids-mode/verify-pin': handleKidsVerifyPin,
+    'POST /api/kids-mode/sites/upsert': handleKidsUpsertSite,
+    'POST /api/kids-mode/sites/delete': handleKidsDeleteSite,
     'GET /api/stats': handleGetStats,
     'GET /api/system-apps': handleGetSystemApps,
     'POST /api/extract-icon': handleExtractIcon,
@@ -1532,9 +1657,11 @@ const serverReady = new Promise((resolve, reject) => {
         log('error', `Server listen error: ${err.message}`);
         reject(err);
     });
-    server.listen(PORT, '127.0.0.1', () => {
+    server.listen(PORT, '127.0.0.1', async () => {
         console.log(`Smart Workspace server running on http://127.0.0.1:${PORT}`);
         log('info', `Server started on http://127.0.0.1:${PORT}`);
+        // Publish initial Kids Mode state so main.js can apply navigation/menu rules.
+        try { publishKidsState(await loadConfig()); } catch (e) { log('error', 'publishKidsState failed: ' + e.message); }
         resolve();
     });
 });

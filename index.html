@@ -247,6 +247,43 @@
         #simple-pin-modal { width: 320px; }
         #simple-pin-modal h2 { margin: 0 0 0.5rem; font-size: 1.2rem; }
         #simple-pin-modal input { width: 100%; padding: 0.75rem; font-size: 1.5rem; text-align: center; letter-spacing: 0.5rem; box-sizing: border-box; }
+
+        /* --- Kids Mode --- */
+        body[data-view="kids"] .status-bar,
+        body[data-view="kids"] .header-container,
+        body[data-view="kids"] .category-bar,
+        body[data-view="kids"] .dashboard-grid,
+        body[data-view="kids"] #simple-view { display: none !important; }
+        body[data-view="advanced"] #kids-view,
+        body[data-view="simple"] #kids-view { display: none !important; }
+        #kids-view { width: 100%; max-width: 1400px; margin: 0 auto; padding: 1rem 1.5rem 4rem; box-sizing: border-box; }
+        #kids-view .kv-header { display: flex; align-items: center; justify-content: center; gap: 1rem; padding: 1rem 0 1.5rem; }
+        #kids-view .kv-header img { height: 56px; }
+        #kids-view .kv-header h1 { margin: 0; font-size: 1.8rem; }
+        #kids-view .kv-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.25rem; }
+        @media (max-width: 1100px) { #kids-view .kv-grid { grid-template-columns: repeat(4, 1fr); } }
+        @media (max-width: 720px)  { #kids-view .kv-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 480px)  { #kids-view .kv-grid { grid-template-columns: repeat(2, 1fr); } }
+        .kv-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem 0.75rem; border-radius: 20px; background: var(--card-color); border: 3px solid var(--border); cursor: pointer; text-align: center; text-decoration: none; color: var(--text-main); min-height: 200px; transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s; }
+        .kv-tile:hover, .kv-tile:focus { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 8px 22px rgba(0,0,0,0.18); outline: none; }
+        .kv-tile .kv-icon { font-size: 100px; line-height: 1; margin-bottom: 0.85rem; }
+        .kv-tile .kv-name { font-size: 1.25rem; font-weight: 700; word-break: break-word; }
+        .kv-empty { grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: var(--text-muted); font-size: 1.1rem; }
+        .kv-blocked { background: var(--card-color); border: 3px solid var(--warning, #f59e0b); border-radius: 20px; padding: 2rem; margin-bottom: 1.5rem; text-align: center; }
+        .kv-blocked .kv-blocked-icon { font-size: 64px; margin-bottom: 0.5rem; }
+        .kv-blocked h2 { margin: 0 0 0.4rem; font-size: 1.4rem; }
+        .kv-blocked p { margin: 0 0 1rem; color: var(--text-muted); }
+        .kv-parent-btn { position: fixed; bottom: 18px; right: 18px; padding: 10px 16px; border-radius: 24px; background: var(--card-color); color: var(--text-muted); border: 2px solid var(--border); cursor: pointer; font-size: 0.85rem; opacity: 0.5; transition: opacity 0.15s; }
+        .kv-parent-btn:hover { opacity: 1; }
+        #parent-pin-modal { width: 320px; }
+        #parent-pin-modal h2 { margin: 0 0 0.5rem; font-size: 1.2rem; }
+        #parent-pin-modal input { width: 100%; padding: 0.75rem; font-size: 1.5rem; text-align: center; letter-spacing: 0.5rem; box-sizing: border-box; }
+        .kv-site-row { display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; }
+        .kv-site-row .kv-site-icon { font-size: 1.5rem; width: 32px; text-align: center; }
+        .kv-site-row .kv-site-info { flex: 1; min-width: 0; }
+        .kv-site-row .kv-site-name { font-weight: 600; font-size: 0.9rem; }
+        .kv-site-row .kv-site-url { color: var(--text-muted); font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .kv-site-row button { padding: 4px 8px; font-size: 0.75rem; }
     </style>
 </head>
 <body data-view="advanced">
@@ -331,6 +368,76 @@
         </div>
     </dialog>
 
+    <!-- KIDS VIEW -->
+    <div id="kids-view">
+        <div class="kv-header">
+            <img src="/logo.png" alt="">
+            <h1>Kids Workspace</h1>
+        </div>
+        <div id="kv-blocked-banner" style="display:none;" class="kv-blocked">
+            <div class="kv-blocked-icon">🚫</div>
+            <h2>This site isn’t on your list</h2>
+            <p>Ask a grown-up to add it for you.</p>
+            <button class="btn-primary" onclick="kidsGoHome()">🏠 Back to Home</button>
+        </div>
+        <div id="kv-grid" class="kv-grid"></div>
+        <button class="kv-parent-btn" onclick="requestParentAccess()" title="Parent access">🔒 Parent</button>
+    </div>
+
+    <!-- Parent PIN prompt -->
+    <dialog id="parent-pin-modal">
+        <h2 id="parent-pin-title">Parent PIN</h2>
+        <small id="parent-pin-help" style="color:var(--text-muted); display:block; margin-bottom:0.75rem;">Enter the Parent PIN to continue.</small>
+        <input type="password" id="parent-pin-input" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off">
+        <div style="display:flex; gap:0.5rem; justify-content:flex-end; margin-top:1rem;">
+            <button class="btn-secondary" onclick="closeModal('parent-pin-modal')">Cancel</button>
+            <button class="btn-primary" id="parent-pin-submit" onclick="submitParentPin()">Unlock</button>
+        </div>
+    </dialog>
+
+    <!-- Kids Mode site editor -->
+    <dialog id="kids-site-editor">
+        <h2 id="kids-site-editor-title" style="margin-top:0;">Add Kid-Safe Site</h2>
+        <input type="hidden" id="kids-site-id">
+        <div class="form-group"><label>Name</label><input type="text" id="kids-site-name" placeholder="e.g. CBeebies"></div>
+        <div class="form-group"><label>URL</label><input type="text" id="kids-site-url" placeholder="https://www.bbc.co.uk/cbeebies"></div>
+        <div class="form-group"><label>Icon (emoji)</label><input type="text" id="kids-site-icon" maxlength="4" value="🌈" style="font-size:1.5rem; text-align:center;"></div>
+        <div style="display:flex; gap:0.5rem; justify-content:flex-end; margin-top:1rem;">
+            <button class="btn-secondary" onclick="closeModal('kids-site-editor')">Cancel</button>
+            <button class="btn-primary" onclick="submitKidsSiteEditor()">Save</button>
+        </div>
+    </dialog>
+
+    <!-- Kids Mode manage modal (allowlist editor) -->
+    <dialog id="kids-manage-modal" style="max-width:560px;">
+        <h2 style="margin-top:0;">👶 Kids Mode</h2>
+        <small style="color:var(--text-muted); display:block; margin-bottom:0.75rem;">Approve websites your child can visit. Anything not on this list is blocked inside Smart Workspace.</small>
+        <div style="background:var(--bg-color); border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin-bottom:1rem; font-size:0.78rem; color:var(--text-muted);">
+            <strong style="color:var(--text-main);">Honest note:</strong> Kids Mode protects what happens <em>inside Smart Workspace</em>. For full safety on this PC, also turn on <strong>Microsoft Family Safety</strong> or set router DNS to <strong>OpenDNS FamilyShield</strong>.
+        </div>
+        <div class="form-group" style="flex-direction: row; align-items: center; justify-content: space-between;">
+            <div><strong style="display:block;">Kids Mode is</strong><small id="kids-mode-status" style="color:var(--text-muted);">Off</small></div>
+            <label class="switch"><input type="checkbox" id="setting-kids-mode" onchange="toggleKidsMode(this.checked)"><span class="slider"></span></label>
+        </div>
+        <div class="form-group">
+            <label>Parent PIN <small style="color:var(--text-muted);">(required to enable, change list, or turn off)</small></label>
+            <div style="display:flex; gap:6px;">
+                <input type="password" id="kids-pin-input" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="4–8 digits" style="flex:1;">
+                <button class="btn-secondary" onclick="setParentPin()">Set PIN</button>
+            </div>
+            <small id="kids-pin-status" style="color:var(--text-muted); display:block; margin-top:6px; font-size:0.75rem;"></small>
+        </div>
+        <div style="margin: 1rem 0 0.5rem; display:flex; align-items:center; justify-content:space-between;">
+            <strong>Approved Sites</strong>
+            <div style="display:flex; gap:6px;">
+                <button class="btn-secondary" style="font-size:0.78rem; padding:4px 10px;" onclick="addKidsStarterPack()">+ Starter Pack</button>
+                <button class="btn-primary" style="font-size:0.78rem; padding:4px 10px;" onclick="openKidsSiteEditor()">+ Add Site</button>
+            </div>
+        </div>
+        <div id="kids-sites-list" style="max-height:280px; overflow-y:auto;"></div>
+        <div style="display:flex; justify-content:flex-end; margin-top:1rem;"><button class="btn-primary" onclick="closeModal('kids-manage-modal')">Done</button></div>
+    </dialog>
+
     <!-- SETTINGS MODAL -->
     <dialog id="settings-modal">
         <img src="/logo.png" alt="KLS Digital Solutions" class="settings-logo">
@@ -387,6 +494,7 @@
         <button class="btn-secondary" style="width:100%; font-size:0.85rem; margin-bottom: 1rem;" onclick="viewLogs()">📋 View Logs</button>
         <button class="btn-secondary" id="settings-changelog-btn" style="width:100%; font-size:0.85rem; margin-bottom: 1rem; position:relative;" onclick="openChangelog()">📰 What's New<span id="changelog-dot" style="display:none; position:absolute; top:8px; right:10px; width:8px; height:8px; border-radius:50%; background:var(--accent);"></span></button>
         <button class="btn-secondary" style="width:100%; font-size:0.85rem; margin-bottom: 1rem;" onclick="openSuggestedFromSettings()">✨ Suggested Websites</button>
+        <button class="btn-secondary" style="width:100%; font-size:0.85rem; margin-bottom: 1rem;" onclick="openKidsManage()">👶 Kids Mode</button>
         <button class="btn-secondary" style="width:100%; font-size:0.85rem; margin-bottom: 1rem;" onclick="replaySetupWizard()">🎓 Replay Setup Wizard</button>
         <button class="btn-secondary" style="width:100%; font-size:0.85rem; margin-bottom: 1rem;" onclick="openLegal()">⚖️ Legal &amp; Licence</button>
         <div style="display: flex; justify-content: flex-end; margin-top: 1rem;"><button class="btn-primary" onclick="closeModal('settings-modal')">Done</button></div>
@@ -847,6 +955,279 @@
         async function exitSimpleView() {
             document.body.setAttribute('data-view', 'advanced');
             await loadDashboard();
+        }
+
+        // --- Kids Mode ---
+        var kidsState = { enabled: false, hasPin: false, sites: [] };
+        var parentPinPurpose = null; // 'manage' | 'exit' | callback function
+
+        async function loadKidsState() {
+            try {
+                var r = await fetch('/api/kids-mode');
+                kidsState = await r.json();
+            } catch (e) { kidsState = { enabled: false, hasPin: false, sites: [] }; }
+            return kidsState;
+        }
+
+        async function enterKidsView() {
+            await loadKidsState();
+            document.body.setAttribute('data-view', 'kids');
+            // Show blocked banner if main.js redirected here.
+            try {
+                var params = new URLSearchParams(window.location.search);
+                var blocked = params.get('blocked') === '1';
+                document.getElementById('kv-blocked-banner').style.display = blocked ? 'block' : 'none';
+            } catch (e) {}
+            renderKidsView();
+        }
+
+        function renderKidsView() {
+            var grid = document.getElementById('kv-grid');
+            if (!grid) return;
+            var sites = (kidsState.sites || []);
+            if (!sites.length) {
+                grid.innerHTML = '<div class="kv-empty">No sites approved yet. Tap 🔒 Parent to add some.</div>';
+                return;
+            }
+            grid.innerHTML = sites.map(function(s) {
+                var safeName = escapeHtml(s.name);
+                var safeUrl = sanitizeUrl(s.url);
+                var safeIcon = escapeHtml(s.icon || '🌈');
+                return '<a class="kv-tile" href="' + escapeHtml(safeUrl) + '" aria-label="Open ' + safeName + '">' +
+                    '<div class="kv-icon">' + safeIcon + '</div>' +
+                    '<div class="kv-name">' + safeName + '</div>' +
+                    '</a>';
+            }).join('');
+        }
+
+        function kidsGoHome() {
+            // Strip blocked params and re-enter clean kids view.
+            try { history.replaceState(null, '', '/?kids=1'); } catch (e) {}
+            document.getElementById('kv-blocked-banner').style.display = 'none';
+        }
+
+        function requestParentAccess() {
+            // Reveal Settings (which contains Kids Mode management) after PIN.
+            promptParentPin('manage', function() {
+                openSettings();
+            });
+        }
+
+        function promptParentPin(purpose, cb) {
+            parentPinPurpose = cb || purpose;
+            var input = document.getElementById('parent-pin-input');
+            if (input) input.value = '';
+            try { document.getElementById('parent-pin-modal').showModal(); } catch (e) {}
+            setTimeout(function() { try { input.focus(); } catch (e) {} }, 50);
+        }
+
+        async function submitParentPin() {
+            var pin = (document.getElementById('parent-pin-input').value || '').trim();
+            try {
+                var r = await fetch('/api/kids-mode/verify-pin', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin: pin })
+                });
+                var j = await r.json();
+                if (!j.ok) { showToast('Incorrect Parent PIN', 'error'); return; }
+            } catch (e) { showToast('PIN check failed', 'error'); return; }
+            try { document.getElementById('parent-pin-modal').close(); } catch (e) {}
+            // Stash the PIN briefly so admin actions don't re-prompt for a moment.
+            window._cachedParentPin = pin;
+            setTimeout(function() { window._cachedParentPin = null; }, 5 * 60 * 1000);
+            var cb = parentPinPurpose;
+            parentPinPurpose = null;
+            if (typeof cb === 'function') cb(pin);
+        }
+
+        async function openKidsManage() {
+            await loadKidsState();
+            document.getElementById('setting-kids-mode').checked = !!kidsState.enabled;
+            document.getElementById('kids-mode-status').textContent = kidsState.enabled ? 'On' : 'Off';
+            document.getElementById('kids-pin-input').value = '';
+            document.getElementById('kids-pin-status').textContent = kidsState.hasPin ? 'PIN is set.' : 'No PIN set yet.';
+            renderKidsManageList();
+            try { document.getElementById('kids-manage-modal').showModal(); } catch (e) {}
+        }
+
+        function renderKidsManageList() {
+            var list = document.getElementById('kids-sites-list');
+            if (!list) return;
+            var sites = kidsState.sites || [];
+            if (!sites.length) { list.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem; padding:8px;">No sites yet. Add one or use the Starter Pack.</div>'; return; }
+            list.innerHTML = sites.map(function(s) {
+                return '<div class="kv-site-row">' +
+                    '<div class="kv-site-icon">' + escapeHtml(s.icon || '🌈') + '</div>' +
+                    '<div class="kv-site-info">' +
+                        '<div class="kv-site-name">' + escapeHtml(s.name) + '</div>' +
+                        '<div class="kv-site-url">' + escapeHtml(s.url) + '</div>' +
+                    '</div>' +
+                    '<button class="btn-secondary" onclick="openKidsSiteEditor(\'' + encodeURIComponent(s.id) + '\')">Edit</button>' +
+                    '<button class="btn-secondary" style="color:var(--danger); border-color:var(--danger);" onclick="kidsDeleteSite(\'' + encodeURIComponent(s.id) + '\')">Delete</button>' +
+                '</div>';
+            }).join('');
+        }
+
+        function openKidsSiteEditor(idEnc) {
+            var id = idEnc ? decodeURIComponent(idEnc) : '';
+            var existing = id ? (kidsState.sites || []).find(function(s){ return s.id === id; }) : null;
+            document.getElementById('kids-site-editor-title').textContent = existing ? 'Edit Kid-Safe Site' : 'Add Kid-Safe Site';
+            document.getElementById('kids-site-id').value = existing ? existing.id : '';
+            document.getElementById('kids-site-name').value = existing ? existing.name : '';
+            document.getElementById('kids-site-url').value = existing ? existing.url : '';
+            document.getElementById('kids-site-icon').value = existing ? (existing.icon || '🌈') : '🌈';
+            try { document.getElementById('kids-site-editor').showModal(); } catch (e) {}
+        }
+
+        async function ensureParentPin() {
+            // Returns the PIN string, or null if the user cancels.
+            if (window._cachedParentPin) return window._cachedParentPin;
+            if (!kidsState.hasPin) return ''; // server allows empty when no PIN set
+            return new Promise(function(resolve) {
+                promptParentPin('action', function(pin) { resolve(pin); });
+                // If user closes modal without submitting, parentPinPurpose will be cleared but resolve never called.
+                // Watch for close.
+                var dlg = document.getElementById('parent-pin-modal');
+                var onClose = function() { dlg.removeEventListener('close', onClose); if (parentPinPurpose) { parentPinPurpose = null; resolve(null); } };
+                dlg.addEventListener('close', onClose);
+            });
+        }
+
+        async function submitKidsSiteEditor() {
+            var pin = await ensureParentPin();
+            if (pin === null) return;
+            var payload = {
+                pin: pin,
+                id: document.getElementById('kids-site-id').value || undefined,
+                name: document.getElementById('kids-site-name').value.trim(),
+                url: document.getElementById('kids-site-url').value.trim(),
+                icon: document.getElementById('kids-site-icon').value.trim() || '🌈'
+            };
+            try {
+                var r = await fetch('/api/kids-mode/sites/upsert', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                var j = await r.json();
+                if (!r.ok) { showToast(j.error || 'Save failed', 'error'); return; }
+                showToast('Site saved', 'success');
+                try { document.getElementById('kids-site-editor').close(); } catch (e) {}
+                await loadKidsState();
+                renderKidsManageList();
+                if (document.body.getAttribute('data-view') === 'kids') renderKidsView();
+            } catch (e) { showToast('Save failed', 'error'); }
+        }
+
+        async function kidsDeleteSite(idEnc) {
+            var id = decodeURIComponent(idEnc);
+            if (!confirm('Remove this site from the approved list?')) return;
+            var pin = await ensureParentPin();
+            if (pin === null) return;
+            try {
+                var r = await fetch('/api/kids-mode/sites/delete', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin: pin, id: id })
+                });
+                var j = await r.json();
+                if (!r.ok) { showToast(j.error || 'Delete failed', 'error'); return; }
+                await loadKidsState();
+                renderKidsManageList();
+                if (document.body.getAttribute('data-view') === 'kids') renderKidsView();
+            } catch (e) { showToast('Delete failed', 'error'); }
+        }
+
+        async function setParentPin() {
+            var newPin = (document.getElementById('kids-pin-input').value || '').trim();
+            // If a PIN already exists, server requires the current one. Prompt for it.
+            var currentPin = '';
+            if (kidsState.hasPin) {
+                currentPin = await ensureParentPin();
+                if (currentPin === null) return;
+            }
+            try {
+                var r = await fetch('/api/kids-mode/set-pin', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin: currentPin, newPin: newPin })
+                });
+                var j = await r.json();
+                if (!r.ok) { showToast(j.error || 'Could not set PIN', 'error'); return; }
+                kidsState.hasPin = !!j.hasPin;
+                document.getElementById('kids-pin-status').textContent = kidsState.hasPin ? 'PIN is set.' : 'No PIN set.';
+                document.getElementById('kids-pin-input').value = '';
+                showToast('Parent PIN updated', 'success');
+            } catch (e) { showToast('Could not set PIN', 'error'); }
+        }
+
+        async function toggleKidsMode(enabled) {
+            // Enabling requires a PIN to exist; disabling requires the PIN.
+            if (enabled && !kidsState.hasPin) {
+                showToast('Set a Parent PIN first', 'warning');
+                document.getElementById('setting-kids-mode').checked = false;
+                return;
+            }
+            var pin = '';
+            if (!enabled) {
+                pin = await ensureParentPin();
+                if (pin === null) {
+                    document.getElementById('setting-kids-mode').checked = true;
+                    return;
+                }
+            }
+            try {
+                var r = await fetch('/api/kids-mode/toggle', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: enabled, pin: pin })
+                });
+                var j = await r.json();
+                if (!r.ok) {
+                    showToast(j.error || 'Toggle failed', 'error');
+                    document.getElementById('setting-kids-mode').checked = !enabled;
+                    return;
+                }
+                kidsState.enabled = !!j.enabled;
+                document.getElementById('kids-mode-status').textContent = kidsState.enabled ? 'On' : 'Off';
+                showToast(kidsState.enabled ? 'Kids Mode is on' : 'Kids Mode is off', 'success');
+                if (kidsState.enabled) {
+                    // Switch to kids view immediately.
+                    try { document.getElementById('kids-manage-modal').close(); } catch (e) {}
+                    try { document.getElementById('settings-modal').close(); } catch (e) {}
+                    await enterKidsView();
+                } else {
+                    // Returning to normal advanced view.
+                    document.body.setAttribute('data-view', 'advanced');
+                    await loadDashboard();
+                }
+            } catch (e) { showToast('Toggle failed', 'error'); }
+        }
+
+        async function addKidsStarterPack() {
+            var pin = await ensureParentPin();
+            if (pin === null) return;
+            var pack = [
+                { name: 'CBeebies', url: 'https://www.bbc.co.uk/cbeebies', icon: '🐻' },
+                { name: 'BBC Bitesize', url: 'https://www.bbc.co.uk/bitesize', icon: '📚' },
+                { name: 'Khan Academy Kids', url: 'https://learn.khanacademy.org/khan-academy-kids/', icon: '🏫' },
+                { name: 'PBS Kids', url: 'https://pbskids.org', icon: '🎨' },
+                { name: 'NASA Kids’ Club', url: 'https://www.nasa.gov/kidsclub/', icon: '🚀' },
+                { name: 'Coolmath4Kids', url: 'https://www.coolmath4kids.com', icon: '➕' }
+            ];
+            var added = 0;
+            for (var i = 0; i < pack.length; i++) {
+                var s = pack[i];
+                // Skip if a site with the same URL already exists.
+                if ((kidsState.sites || []).some(function(x){ return x.url === s.url; })) continue;
+                try {
+                    var r = await fetch('/api/kids-mode/sites/upsert', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ pin: pin, name: s.name, url: s.url, icon: s.icon })
+                    });
+                    if (r.ok) added++;
+                } catch (e) {}
+            }
+            await loadKidsState();
+            renderKidsManageList();
+            if (document.body.getAttribute('data-view') === 'kids') renderKidsView();
+            showToast('Added ' + added + ' starter site' + (added === 1 ? '' : 's'), 'success');
         }
 
         function renderSimpleView() {
@@ -1949,7 +2330,9 @@
                 // Decide which view to render based on settings.
                 var settings = {};
                 try { settings = await (await fetch('/api/settings')).json(); } catch (e) {}
-                if (settings && settings.simpleMode) {
+                if (settings && settings.kidsMode) {
+                    await enterKidsView();
+                } else if (settings && settings.simpleMode) {
                     // Pre-load config so simple view can render immediately.
                     try { currentConfig = await (await fetch('/api/config')).json(); } catch (e) {}
                     document.body.setAttribute('data-view', 'simple');

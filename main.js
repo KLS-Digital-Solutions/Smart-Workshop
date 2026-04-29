@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, shell } = require('electron');
+const { app, BrowserWindow, dialog, shell, Menu } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
@@ -110,6 +110,9 @@ function createWindow() {
     // Route any external link (target="_blank", window.open, middle-click)
     // to the user's default browser instead of opening a new app window.
     win.webContents.setWindowOpenHandler(({ url }) => {
+        const kids = global.smartKidsState && global.smartKidsState.enabled;
+        // In Kids Mode, deny popups silently — never spawn extra windows or hand off to the OS browser.
+        if (kids) return { action: 'deny' };
         // Never relay our own app URL back out to the system browser.
         if (url && /^https?:\/\//i.test(url) && !/^https?:\/\/127\.0\.0\.1:3000/i.test(url)) {
             shell.openExternal(url);
@@ -119,10 +122,43 @@ function createWindow() {
 
     // Catch in-page navigations to external URLs as a safety net.
     win.webContents.on('will-navigate', (event, url) => {
+        const kids = global.smartKidsState && global.smartKidsState.enabled;
+        if (kids) {
+            // Always allow our own app shell.
+            if (url.startsWith('http://127.0.0.1:3000')) return;
+            // Allow only if URL hostname is in the parent-approved allowlist.
+            try {
+                const host = new URL(url).hostname.toLowerCase();
+                const allowed = global.smartKidsState.hosts;
+                if (allowed && (allowed.has(host) || [...allowed].some(h => host === h || host.endsWith('.' + h)))) return;
+            } catch {}
+            event.preventDefault();
+            // Send them to the in-app blocked page (served by the renderer).
+            try { win.loadURL('http://127.0.0.1:3000/?kids=1&blocked=1&u=' + encodeURIComponent(url)); } catch {}
+            return;
+        }
         if (!url.startsWith('http://127.0.0.1:3000')) {
             event.preventDefault();
             if (/^https?:\/\//i.test(url)) shell.openExternal(url);
         }
+    });
+
+    // Block downloads while Kids Mode is on. Also suppress right-click and devtools shortcuts.
+    try {
+        win.webContents.session.on('will-download', (event) => {
+            if (global.smartKidsState && global.smartKidsState.enabled) event.preventDefault();
+        });
+    } catch {}
+    win.webContents.on('context-menu', (event) => {
+        if (global.smartKidsState && global.smartKidsState.enabled) event.preventDefault();
+    });
+    win.webContents.on('before-input-event', (event, input) => {
+        if (!(global.smartKidsState && global.smartKidsState.enabled)) return;
+        const k = (input.key || '').toLowerCase();
+        // Block devtools, view-source, and printing-style shortcuts that could expose chrome.
+        if (k === 'f12') return event.preventDefault();
+        if (input.control && input.shift && (k === 'i' || k === 'j' || k === 'c')) return event.preventDefault();
+        if (input.control && (k === 'u' || k === 's' || k === 'p')) return event.preventDefault();
     });
 
     // Wait for the server to be listening before loading the UI.
@@ -160,6 +196,44 @@ app.whenReady().then(() => {
 
     createSplash();
     createWindow();
+
+    // Kids Mode menu wiring. server.js publishes state and calls global.smartKidsApply()
+    // whenever the toggle, PIN, or allowlist changes. We rebuild the application menu
+    // so a child can always click "🏠 Home" to return to the dashboard.
+    function applyKidsMode() {
+        const kids = global.smartKidsState && global.smartKidsState.enabled;
+        if (kids) {
+            const template = [
+                {
+                    label: '🏠 Home',
+                    accelerator: 'F1',
+                    click: () => {
+                        if (mainWin) {
+                            try { mainWin.loadURL('http://127.0.0.1:3000/?kids=1'); } catch {}
+                        }
+                    }
+                },
+                {
+                    label: 'Back',
+                    accelerator: 'Alt+Left',
+                    click: () => { try { mainWin && mainWin.webContents.goBack(); } catch {} }
+                },
+                {
+                    label: 'Forward',
+                    accelerator: 'Alt+Right',
+                    click: () => { try { mainWin && mainWin.webContents.goForward(); } catch {} }
+                }
+            ];
+            try { Menu.setApplicationMenu(Menu.buildFromTemplate(template)); } catch {}
+            if (mainWin) try { mainWin.setMenuBarVisibility(true); mainWin.setAutoHideMenuBar(false); } catch {}
+        } else {
+            try { Menu.setApplicationMenu(null); } catch {}
+            if (mainWin) try { mainWin.setMenuBarVisibility(false); mainWin.setAutoHideMenuBar(true); } catch {}
+        }
+    }
+    global.smartKidsApply = applyKidsMode;
+    // Apply once now in case the server already published initial state.
+    applyKidsMode();
 
     // Shared state with server for update status UI
     global.smartUpdateState = {
