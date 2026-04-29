@@ -88,3 +88,21 @@ smartws_parse_fail:
 
 smartws_skip_update_check:
 !macroend
+
+; ---------------------------------------------------------------------------
+; Create a machine-wide license folder so all Windows user accounts on this
+; PC share a single activation slot. Grants the BUILTIN\Users group full
+; control via icacls. Failures are non-fatal: the app falls back to a
+; per-user license file automatically.
+; ---------------------------------------------------------------------------
+!macro customInstall
+  CreateDirectory "$APPDATA\..\..\..\ProgramData\Smart Workspace"
+  ; The above resolves via APPDATA traversal on standard layouts; use the
+  ; canonical env var instead for reliability.
+  ReadEnvStr $R0 "PROGRAMDATA"
+  ${If} $R0 != ""
+    CreateDirectory "$R0\Smart Workspace"
+    nsExec::Exec 'icacls "$R0\Smart Workspace" /grant "*S-1-5-32-545:(OI)(CI)M" /T /C /Q'
+    Pop $R1 ; discard exit code; non-fatal on failure
+  ${EndIf}
+!macroend
