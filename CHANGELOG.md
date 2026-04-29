@@ -1,4 +1,12 @@
 # Smart Workspace - Changelog
+## v1.0.42
+
+### Fixed
+- Kids mode home button visible on external sites
+
+### Changed
+- Tweak CHANGELOG v1.0.41 entry
+
 ## v1.0.41
 
 ### Added
