@@ -1,0 +1,42 @@
+name: Build Linux AppImage
+
+# Triggers when a tag like v1.1.0 is pushed (matching the npm release pattern)
+# or when manually dispatched. Cross-building AppImage from Windows fails
+# because electron-builder ships only Linux ELF helpers (mksquashfs, etc.),
+# so we build the Linux artifact on an Ubuntu runner and attach it to the
+# GitHub Release that electron-builder created from the Windows host.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag to attach the AppImage to (e.g. v1.1.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Build and publish AppImage
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/build.js --linux --publish
