@@ -167,7 +167,20 @@
         .license-error { color: var(--danger); font-size: 0.85rem; margin-bottom: 1rem; display: none; }
 
         .company-logo { height: 42px; border-radius: 8px; object-fit: contain; }
-        .settings-logo { display: block; width: 160px; margin: 0 auto 1rem; border-radius: 10px; }
+        .settings-logo { width: 56px; height: 56px; border-radius: 10px; object-fit: contain; flex-shrink: 0; }
+        .settings-header { display: flex; align-items: center; gap: 12px; margin-bottom: 0.75rem; }
+        .settings-header h2 { margin: 0; font-size: 1.25rem; line-height: 1.1; }
+        .settings-header .ver { color: var(--accent); font-size: 0.78rem; font-weight: 600; margin-top: 2px; }
+        .settings-header .upd { color: var(--text-muted); font-size: 0.72rem; margin-top: 2px; }
+        .settings-card { background: var(--bg-color); border-radius: 10px; padding: 10px 14px; margin-bottom: 0.75rem; }
+        .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; }
+        .settings-row + .settings-row { border-top: 1px solid var(--border); }
+        .settings-row .lbl strong { display: block; color: var(--text-main); font-size: 0.88rem; }
+        .settings-row .lbl small { color: var(--text-muted); font-size: 0.72rem; }
+        .settings-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 0.75rem; }
+        .settings-actions .btn-secondary { width: 100%; font-size: 0.82rem; margin: 0; padding: 8px 10px; position: relative; }
+        #settings-modal summary { cursor: pointer; font-size: 0.8rem; color: var(--text-muted); padding: 4px 0; }
+        #settings-modal summary::-webkit-details-marker { color: var(--accent); }
 
         /* Update banner */
         .update-banner { width: 100%; max-width: 1000px; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 10px 20px; border-radius: 12px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; font-weight: 500; box-sizing: border-box; }
@@ -440,64 +453,70 @@
 
     <!-- SETTINGS MODAL -->
     <dialog id="settings-modal">
-        <img src="/logo.png" alt="KLS Digital Solutions" class="settings-logo">
-        <h2 style="margin-top:0; margin-bottom: 0.2rem; font-size: 1.4rem;">Settings</h2>
-        <div style="color:var(--accent); font-size: 0.85rem; margin-bottom: 0.25rem; font-weight: 600;" id="app-version-display">Installed Version 1.0.0</div>
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom: 1rem;">
-            <div style="color:var(--text-muted); font-size: 0.75rem; flex:1;" id="update-status-line">Checking for updates…</div>
-            <button class="btn-secondary" id="btn-check-updates" style="padding:4px 10px; font-size:0.75rem;" onclick="manualCheckForUpdates()">Check Now</button>
+        <div class="settings-header">
+            <img src="/logo.png" alt="KLS Digital Solutions" class="settings-logo">
+            <div style="flex:1; min-width:0;">
+                <h2>Settings</h2>
+                <div class="ver" id="app-version-display">Installed Version 1.0.0</div>
+                <div class="upd" id="update-status-line">Checking for updates…</div>
+            </div>
+            <button class="btn-secondary" id="btn-check-updates" style="padding:4px 10px; font-size:0.72rem; flex-shrink:0;" onclick="manualCheckForUpdates()">Check Now</button>
         </div>
-        <div style="background:var(--bg-color); border-radius:10px; padding:12px 16px; margin-bottom:1rem;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <strong style="font-size:0.9rem;">License</strong>
+        <div class="settings-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <strong style="font-size:0.88rem;">License</strong>
                 <span id="license-badge" style="background:var(--warning); color:white; padding:2px 8px; border-radius:12px; font-size:0.7rem; font-weight:bold;">TRIAL</span>
             </div>
-            <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px;" id="license-status-text">Checking...</div>
+            <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:6px;" id="license-status-text">Checking...</div>
             <div id="license-activate-row" style="display:flex; gap:6px;">
                 <input type="text" id="settings-license-key" placeholder="License key" style="flex:1; padding:6px 10px; font-size:0.85rem;">
                 <button class="btn-primary" style="padding:6px 12px; font-size:0.8rem;" onclick="activateFromSettings()">Activate</button>
             </div>
             <div id="license-active-row" style="display:none;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <code id="license-masked-key" style="font-size:0.8rem; color:var(--text-muted);"></code>
-                    <button class="btn-secondary" style="padding:4px 10px; font-size:0.78rem; color:var(--danger); border-color:var(--danger);" onclick="deactivateLicense()">Deactivate</button>
-                </div>
+                <details>
+                    <summary>Manage activation</summary>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
+                        <code id="license-masked-key" style="font-size:0.8rem; color:var(--text-muted);"></code>
+                        <button class="btn-secondary" style="padding:4px 10px; font-size:0.78rem; color:var(--danger); border-color:var(--danger);" onclick="deactivateLicense()">Deactivate</button>
+                    </div>
+                    <div class="license-help" style="margin-top:6px;">Works offline for up to 7 days · Activates on up to 3 devices · Deactivate to move to another computer · No telemetry or data collection</div>
+                </details>
             </div>
-            <div class="license-help">Works offline for up to 7 days · Activates on up to 3 devices · Deactivate to move to another computer · No telemetry or data collection</div>
         </div>
-        <div class="form-group" style="flex-direction: row; align-items: center; justify-content: space-between;">
-            <div><strong style="display:block; color:var(--text-main);">Launch on Startup</strong><small style="color:var(--text-muted);">Automatically start when Windows boots.</small></div>
-            <label class="switch"><input type="checkbox" id="setting-startup" onchange="toggleStartupSetting(this.checked)"><span class="slider"></span></label>
+        <div class="settings-card">
+            <div class="settings-row">
+                <div class="lbl"><strong>Launch on Startup</strong><small>Automatically start when the OS boots.</small></div>
+                <label class="switch"><input type="checkbox" id="setting-startup" onchange="toggleStartupSetting(this.checked)"><span class="slider"></span></label>
+            </div>
+            <div class="settings-row">
+                <div class="lbl"><strong>Open Fullscreen on Start</strong><small>Great for shared family computers.</small></div>
+                <label class="switch"><input type="checkbox" id="setting-fullscreen" onchange="toggleFullscreenSetting(this.checked)"><span class="slider"></span></label>
+            </div>
         </div>
-        <div class="form-group" style="flex-direction: row; align-items: center; justify-content: space-between;">
-            <div><strong style="display:block; color:var(--text-main);">Open Fullscreen on Start</strong><small style="color:var(--text-muted);">Launch in fullscreen mode — great for shared family computers.</small></div>
-            <label class="switch"><input type="checkbox" id="setting-fullscreen" onchange="toggleFullscreenSetting(this.checked)"><span class="slider"></span></label>
-        </div>
-        <div style="background:var(--bg-color); border-radius:10px; padding:12px 16px; margin-bottom:1rem;">
+        <div class="settings-card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <strong style="font-size:0.9rem;">Simple View (Family Mode)</strong>
+                <strong style="font-size:0.88rem;">Simple View (Family Mode)</strong>
                 <label class="switch"><input type="checkbox" id="setting-simple-mode" onchange="toggleSimpleMode(this.checked)"><span class="slider"></span></label>
             </div>
-            <small style="color:var(--text-muted); display:block; margin-bottom:8px;">Big tiles, big text, no clutter — ideal for older relatives. Tag items with the <strong>Family</strong> category to make them visible.</small>
+            <small style="color:var(--text-muted); display:block; margin-bottom:6px; font-size:0.72rem;">Big tiles, big text — tag items with <strong>Family</strong> to show them.</small>
             <div style="display:flex; gap:6px; align-items:center;">
                 <input type="password" id="setting-simple-pin" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="Optional 4–8 digit exit PIN" style="flex:1; padding:6px 10px; font-size:0.85rem;">
                 <button class="btn-secondary" style="padding:6px 12px; font-size:0.8rem;" onclick="setSimplePin()">Set PIN</button>
             </div>
-            <small id="simple-pin-status" style="color:var(--text-muted); display:block; margin-top:6px; font-size:0.75rem;"></small>
+            <small id="simple-pin-status" style="color:var(--text-muted); display:block; margin-top:6px; font-size:0.72rem;"></small>
         </div>
-        <hr style="border:none; border-top:1px solid var(--border); margin: 1rem 0;">
-        <div style="display:flex; gap:10px; margin-bottom: 1rem;">
-            <button class="btn-secondary" style="flex:1; font-size:0.85rem;" onclick="exportConfig()">📤 Export Config</button>
-            <button class="btn-secondary" style="flex:1; font-size:0.85rem;" onclick="document.getElementById('import-file').click()">📥 Import Config</button>
+        <div class="settings-actions">
+            <button class="btn-secondary" onclick="exportConfig()">📤 Export</button>
+            <button class="btn-secondary" onclick="document.getElementById('import-file').click()">📥 Import</button>
+            <button class="btn-secondary" onclick="viewLogs()">📋 Logs</button>
+            <button class="btn-secondary" id="settings-changelog-btn" onclick="openChangelog()">📰 What's New<span id="changelog-dot" style="display:none; position:absolute; top:6px; right:8px; width:8px; height:8px; border-radius:50%; background:var(--accent);"></span></button>
+            <button class="btn-secondary" onclick="openSuggestedFromSettings()">✨ Suggested</button>
+            <button class="btn-secondary" onclick="openKidsManage()">👶 Kids Mode</button>
+            <button class="btn-secondary" onclick="replaySetupWizard()">🎓 Setup Wizard</button>
+            <button class="btn-secondary" onclick="openLegal()">⚖️ Legal</button>
             <input type="file" id="import-file" accept=".json" style="display:none">
         </div>
-        <button class="btn-secondary" style="width:100%; font-size:0.85rem; margin-bottom: 1rem;" onclick="viewLogs()">📋 View Logs</button>
-        <button class="btn-secondary" id="settings-changelog-btn" style="width:100%; font-size:0.85rem; margin-bottom: 1rem; position:relative;" onclick="openChangelog()">📰 What's New<span id="changelog-dot" style="display:none; position:absolute; top:8px; right:10px; width:8px; height:8px; border-radius:50%; background:var(--accent);"></span></button>
-        <button class="btn-secondary" style="width:100%; font-size:0.85rem; margin-bottom: 1rem;" onclick="openSuggestedFromSettings()">✨ Suggested Websites</button>
-        <button class="btn-secondary" style="width:100%; font-size:0.85rem; margin-bottom: 1rem;" onclick="openKidsManage()">👶 Kids Mode</button>
-        <button class="btn-secondary" style="width:100%; font-size:0.85rem; margin-bottom: 1rem;" onclick="replaySetupWizard()">🎓 Replay Setup Wizard</button>
-        <button class="btn-secondary" style="width:100%; font-size:0.85rem; margin-bottom: 1rem;" onclick="openLegal()">⚖️ Legal &amp; Licence</button>
-        <div style="display: flex; justify-content: flex-end; margin-top: 1rem;"><button class="btn-primary" onclick="closeModal('settings-modal')">Done</button></div>
+        <div style="display: flex; justify-content: flex-end;"><button class="btn-primary" onclick="closeModal('settings-modal')">Done</button></div>
     </dialog>
 
     <dialog id="add-modal">

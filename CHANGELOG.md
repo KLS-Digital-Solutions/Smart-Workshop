@@ -1,4 +1,9 @@
 # Smart Workspace - Changelog
+## v1.1.0
+
+### Added
+- Linux support (AppImage) with .desktop scan and autostart
+
 ## v1.0.43
 
 ### Fixed
